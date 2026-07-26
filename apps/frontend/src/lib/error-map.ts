@@ -21,6 +21,7 @@ const ERROR_MAP: Array<{ test: RegExp; fa: string }> = [
 
   // Validation
   { test: /password.*too short|password must be at least/i, fa: 'رمز عبور باید حداقل ۸ کاراکتر باشد.' },
+  { test: /password must contain|lowercase.*uppercase.*digit.*special/i, fa: 'رمز عبور باید شامل حرف بزرگ، حرف کوچک، عدد و کاراکتر ویژه باشد.' },
   { test: /invalid email/i, fa: 'فرمت ایمیل صحیح نیست.' },
   { test: /username.*already|username.*taken/i, fa: 'این نام کاربری قبلاً گرفته شده.' },
 

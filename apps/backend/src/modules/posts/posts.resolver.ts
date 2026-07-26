@@ -1,4 +1,4 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { PostEntity } from './post.entity';
 import { PostsService } from './posts.service';
@@ -20,8 +20,8 @@ export class PostsResolver {
   @Query(() => [PostEntity], { description: 'پست‌های یک کاربر' })
   async postsByUser(
     @Args('userId') userId: string,
-    @Args('limit', { nullable: true, defaultValue: 20 }) limit: number,
-    @Args('offset', { nullable: true, defaultValue: 0 }) offset: number,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
+    @Args('offset', { type: () => Int, nullable: true, defaultValue: 0 }) offset: number,
   ): Promise<PostEntity[]> {
     return this.posts.findByAuthor(userId, limit, offset);
   }
@@ -29,8 +29,8 @@ export class PostsResolver {
   @Query(() => [PostEntity], { description: 'پست‌های یک هشتگ' })
   async postsByHashtag(
     @Args('tag') tag: string,
-    @Args('limit', { nullable: true, defaultValue: 20 }) limit: number,
-    @Args('offset', { nullable: true, defaultValue: 0 }) offset: number,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
+    @Args('offset', { type: () => Int, nullable: true, defaultValue: 0 }) offset: number,
   ): Promise<PostEntity[]> {
     return this.posts.findByHashtag(tag, limit, offset);
   }

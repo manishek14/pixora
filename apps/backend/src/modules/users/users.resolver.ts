@@ -1,4 +1,4 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { UserEntity } from './user.entity';
 import { UsersService } from './users.service';
@@ -23,7 +23,7 @@ export class UsersResolver {
   @Query(() => [UserEntity], { description: 'جستجوی کاربران' })
   async searchUsers(
     @Args('q') q: string,
-    @Args('limit', { nullable: true, defaultValue: 20 }) limit: number,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
   ): Promise<UserEntity[]> {
     return this.users.search(q, limit);
   }

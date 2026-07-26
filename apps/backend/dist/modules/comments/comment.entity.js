@@ -41,7 +41,7 @@ __decorate([
 ], CommentEntity.prototype, "text", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
-    (0, graphql_1.Field)(),
+    (0, graphql_1.Field)(() => graphql_1.Int),
     __metadata("design:type", Number)
 ], CommentEntity.prototype, "likesCount", void 0);
 __decorate([

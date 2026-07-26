@@ -37,16 +37,16 @@ __decorate([
     (0, graphql_1.Query)(() => feed_result_1.FeedResult, { description: 'فید شخصی کاربر (پست‌های فالووینگ + خودش)' }),
     (0, common_1.UseGuards)(gql_auth_guard_1.GqlAuthGuard),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, graphql_1.Args)('limit', { nullable: true, defaultValue: 20 })),
-    __param(2, (0, graphql_1.Args)('offset', { nullable: true, defaultValue: 0 })),
+    __param(1, (0, graphql_1.Args)('limit', { type: () => graphql_1.Int, nullable: true, defaultValue: 20 })),
+    __param(2, (0, graphql_1.Args)('offset', { type: () => graphql_1.Int, nullable: true, defaultValue: 0 })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [user_entity_1.UserEntity, Number, Number]),
     __metadata("design:returntype", Promise)
 ], FeedResolver.prototype, "feed", null);
 __decorate([
     (0, graphql_1.Query)(() => feed_result_1.FeedResult, { description: 'فید اکسپلور (پست‌های محبوب و جدید همه)' }),
-    __param(0, (0, graphql_1.Args)('limit', { nullable: true, defaultValue: 30 })),
-    __param(1, (0, graphql_1.Args)('offset', { nullable: true, defaultValue: 0 })),
+    __param(0, (0, graphql_1.Args)('limit', { type: () => graphql_1.Int, nullable: true, defaultValue: 30 })),
+    __param(1, (0, graphql_1.Args)('offset', { type: () => graphql_1.Int, nullable: true, defaultValue: 0 })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", Promise)

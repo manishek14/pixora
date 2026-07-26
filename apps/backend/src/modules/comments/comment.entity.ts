@@ -10,7 +10,7 @@ import {
   Relation,
   OneToMany,
 } from 'typeorm';
-import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Field, ID, ObjectType, Int } from '@nestjs/graphql';
 import { UserEntity } from '../users/user.entity';
 import { PostEntity } from '../posts/post.entity';
 
@@ -26,7 +26,7 @@ export class CommentEntity {
   text: string;
 
   @Column({ default: 0 })
-  @Field()
+  @Field(() => Int)
   likesCount: number;
 
   @CreateDateColumn()

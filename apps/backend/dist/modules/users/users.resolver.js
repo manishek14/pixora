@@ -59,7 +59,7 @@ __decorate([
 __decorate([
     (0, graphql_1.Query)(() => [user_entity_1.UserEntity], { description: 'جستجوی کاربران' }),
     __param(0, (0, graphql_1.Args)('q')),
-    __param(1, (0, graphql_1.Args)('limit', { nullable: true, defaultValue: 20 })),
+    __param(1, (0, graphql_1.Args)('limit', { type: () => graphql_1.Int, nullable: true, defaultValue: 20 })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Number]),
     __metadata("design:returntype", Promise)

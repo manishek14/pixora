@@ -60,8 +60,8 @@ __decorate([
 __decorate([
     (0, graphql_1.Query)(() => [post_entity_1.PostEntity], { description: 'پست‌های یک کاربر' }),
     __param(0, (0, graphql_1.Args)('userId')),
-    __param(1, (0, graphql_1.Args)('limit', { nullable: true, defaultValue: 20 })),
-    __param(2, (0, graphql_1.Args)('offset', { nullable: true, defaultValue: 0 })),
+    __param(1, (0, graphql_1.Args)('limit', { type: () => graphql_1.Int, nullable: true, defaultValue: 20 })),
+    __param(2, (0, graphql_1.Args)('offset', { type: () => graphql_1.Int, nullable: true, defaultValue: 0 })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Number, Number]),
     __metadata("design:returntype", Promise)
@@ -69,8 +69,8 @@ __decorate([
 __decorate([
     (0, graphql_1.Query)(() => [post_entity_1.PostEntity], { description: 'پست‌های یک هشتگ' }),
     __param(0, (0, graphql_1.Args)('tag')),
-    __param(1, (0, graphql_1.Args)('limit', { nullable: true, defaultValue: 20 })),
-    __param(2, (0, graphql_1.Args)('offset', { nullable: true, defaultValue: 0 })),
+    __param(1, (0, graphql_1.Args)('limit', { type: () => graphql_1.Int, nullable: true, defaultValue: 20 })),
+    __param(2, (0, graphql_1.Args)('offset', { type: () => graphql_1.Int, nullable: true, defaultValue: 0 })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Number, Number]),
     __metadata("design:returntype", Promise)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@apollo/client';
@@ -11,7 +11,8 @@ import { useAuth } from '@/lib/auth';
 import { REGISTER } from '@/graphql/auth';
 import { toPersianError } from '@/lib/error-map';
 import { toast } from '@/lib/toast-store';
-import { Camera, Eye, EyeOff, Mail, Lock, User, AtSign } from 'lucide-react';
+import { evaluatePassword } from '@/lib/password-strength';
+import { Camera, Eye, EyeOff, Mail, Lock, User, AtSign, Check, X } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function RegisterPage() {
@@ -28,9 +29,22 @@ export default function RegisterPage() {
 
   const [registerMut] = useMutation(REGISTER);
 
+  // Re-evaluate strength whenever password changes
+  const strength = useMemo(() => evaluatePassword(password), [password]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Client-side gate: don't even hit the backend if the password is too weak.
+    // Backend re-validates with the same regex, so this is just for UX.
+    if (!strength.isAcceptable) {
+      const msg = t('password.requirements');
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data } = await registerMut({
@@ -56,6 +70,18 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  // Render a single requirement chip with a check/x icon
+  const Requirement = ({ ok, label }: { ok: boolean; label: string }) => (
+    <span
+      className={`inline-flex items-center gap-1 text-[11px] transition-colors ${
+        ok ? 'text-emerald-400' : 'text-lenz-gray'
+      }`}
+    >
+      {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+      {label}
+    </span>
+  );
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
@@ -139,18 +165,56 @@ export default function RegisterPage() {
               </button>
             </div>
 
+            {/* Strength meter — only shown when there is input */}
+            {password.length > 0 && (
+              <div className="space-y-2">
+                {/* 4-segment bar */}
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4].map((seg) => (
+                    <div
+                      key={seg}
+                      className="h-1.5 flex-1 rounded-full transition-all duration-300"
+                      style={{
+                        backgroundColor:
+                          seg <= strength.score ? strength.color : 'rgba(255,255,255,0.08)',
+                      }}
+                    />
+                  ))}
+                </div>
+                {/* Label + requirement chips */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium" style={{ color: strength.color }}>
+                    {t(strength.labelKey)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  <Requirement ok={strength.passed.length} label="8+" />
+                  <Requirement ok={strength.passed.lower} label="a-z" />
+                  <Requirement ok={strength.passed.upper} label="A-Z" />
+                  <Requirement ok={strength.passed.digit} label="0-9" />
+                  <Requirement ok={strength.passed.special} label="!@#" />
+                </div>
+              </div>
+            )}
+
             {error && (
               <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-sm text-rose-400">
                 {error}
               </p>
             )}
 
-            <Button type="submit" fullWidth size="lg" loading={loading}>
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              loading={loading}
+              disabled={!strength.isAcceptable}
+            >
               {t('auth.signup')}
             </Button>
 
             <p className="pt-1 text-center text-xs text-lenz-gray">
-              {t('auth.passwordMin')}
+              {t('password.requirements')}
             </p>
           </div>
         </form>

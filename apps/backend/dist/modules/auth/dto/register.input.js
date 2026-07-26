@@ -41,6 +41,9 @@ __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MinLength)(8, { message: 'password must be at least 8 characters' }),
     (0, class_validator_1.MaxLength)(72),
+    (0, class_validator_1.Matches)(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/, {
+        message: 'password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character',
+    }),
     __metadata("design:type", String)
 ], RegisterInput.prototype, "password", void 0);
 __decorate([

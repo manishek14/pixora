@@ -192,3 +192,51 @@ Stage Summary:
 - Theme tokens verified: Dark (#0a0d12 bg, #2aabee primary), Light (#eef2f7 bg, #1e95d6 primary)
 - Build: 10 routes compile successfully, ~155KB First Load JS
 - Both services running: backend http://localhost:4000, frontend http://localhost:3000
+
+---
+Task ID: 16
+Agent: main
+Task: Fix post-registration "درخواست نامعتبر است" bug + add password strength validation
+
+Work Log:
+- Root cause analysis of "درخواست نامعتبر است" toast appearing ~1s after successful registration:
+  * Discovered via direct curl that `feed(limit: Int, offset: Int)` query returned GraphQL validation error: `Unknown type "Int". Did you mean "ID"?`
+  * Schema inspection showed `feed(limit: Float = 20, offset: Float = 0)` — NestJS's default mapping for TypeScript `number` is GraphQL `Float`, NOT `Int`
+  * Frontend queries use `Int` (industry standard for pagination), so they failed schema validation
+  * GraphQL validation errors return HTTP 400 → matched `/bad request|400/i` in error-map.ts → Persian "درخواست نامعتبر است"
+  * The 400 (NOT a 401) meant the auto-refresh logic didn't kick in, but ErrorLink still toasted the message; the AppShell also bounced the user because no successful `me` query completed
+- Backend fix — switched all numeric args from implicit Float to explicit Int:
+  * `feed.resolver.ts`: limit/offset args now use `@Args('limit', { type: () => Int })`
+  * `posts.resolver.ts`: postsByUser and postsByHashtag limit/offset → Int
+  * `users.resolver.ts`: searchUsers limit → Int
+  * `post.entity.ts`: likesCount, commentsCount fields → `@Field(() => Int)` (was Float)
+  * `comment.entity.ts`: likesCount field → `@Field(() => Int)`
+- Password strength validation — backend:
+  * `register.input.ts`: added `@Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/)` decorator
+  * Requires ≥1 lowercase, ≥1 uppercase, ≥1 digit, ≥1 special char (on top of existing min 8 chars)
+  * ValidationPipe returns 400 with descriptive message when password is weak
+- Password strength validation — frontend:
+  * New `lib/password-strength.ts`: pure-function evaluator returning {score 0-4, color, labelKey, passedChecks, isAcceptable}
+  * `register/page.tsx` now shows:
+    - 4-segment strength bar that fills green as score increases
+    - Persian label (بسیار ضعیف → ضعیف → متوسط → قوی)
+    - 5 check chips (8+, a-z, A-Z, 0-9, !@#) that turn green with ✓ icon when satisfied
+    - Submit button is `disabled` until `isAcceptable` is true (prevents hitting backend with weak password)
+    - Pre-submit guard in `handleSubmit` shows toast if user somehow bypasses the disabled button
+  * Added 5 new i18n keys (fa + en): password.veryWeak, password.weak, password.medium, password.strong, password.veryStrong, password.requirements
+  * Added new error-map pattern for the backend's "password must contain..." message → Persian translation
+- Verification — wrote `scripts/verify-fixes.sh` and ran all 6 tests via direct backend AND via Next.js proxy:
+  * Test 1: register with strong password `Str0ng!Pass` → succeeds, returns tokens ✓
+  * Test 2: `feed(limit: Int, offset: Int)` → succeeds (was failing with "Unknown type Int") ✓
+  * Test 3: `exploreFeed(limit: Int, offset: Int)` → succeeds ✓
+  * Test 4: `me` query → succeeds (auth + JWT validation intact) ✓
+  * Test 5: register with `password123` → rejected with 400 BAD_REQUEST, "password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character" ✓
+  * Test 6: register with `weakpass1!` (no uppercase) → also rejected ✓
+  * All tests pass both directly against :4000 and through the Next.js /api/graphql proxy on :3000
+
+Stage Summary:
+- ROOT CAUSE: NestJS maps TS `number` to GraphQL `Float` by default; frontend used `Int`; "Unknown type Int" → 400 → "درخواست نامعتبر است" toast
+- FIXED: All pagination args (feed, exploreFeed, postsByUser, postsByHashtag, searchUsers) and count fields (likesCount, commentsCount) now use Int
+- NEW: Strong password enforcement on both frontend (UX: live meter + disabled button) and backend (security: class-validator regex)
+- Both services running: backend http://localhost:4000, frontend http://localhost:3000
+- The post-registration bounce is gone — user lands on home page and the FEED query succeeds, no error toast

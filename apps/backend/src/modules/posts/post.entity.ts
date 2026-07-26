@@ -9,7 +9,7 @@ import {
   JoinColumn,
   Relation,
 } from 'typeorm';
-import { Field, ID, ObjectType, Float } from '@nestjs/graphql';
+import { Field, ID, ObjectType, Int } from '@nestjs/graphql';
 import { UserEntity } from '../users/user.entity';
 
 @Entity('posts')
@@ -44,11 +44,11 @@ export class PostEntity {
   isReel: boolean;
 
   @Column({ default: 0 })
-  @Field(() => Float)
+  @Field(() => Int)
   likesCount: number;
 
   @Column({ default: 0 })
-  @Field(() => Float)
+  @Field(() => Int)
   commentsCount: number;
 
   @Column({ default: false })

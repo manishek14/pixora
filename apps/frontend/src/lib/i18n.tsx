@@ -48,6 +48,12 @@ const dict: Record<Locale, Record<string, string>> = {
     'auth.welcomeBack': 'Welcome back',
     'auth.joinLenz': 'Join Lenz today',
     'auth.passwordMin': 'Password must be at least 8 characters',
+    'password.veryWeak': 'Very weak',
+    'password.weak': 'Weak',
+    'password.medium': 'Medium',
+    'password.strong': 'Strong',
+    'password.veryStrong': 'Very strong',
+    'password.requirements': 'Password must include: 8+ chars, uppercase, lowercase, number, special character',
 
     // Nav
     'nav.home': 'Home',
@@ -150,6 +156,12 @@ const dict: Record<Locale, Record<string, string>> = {
     'auth.welcomeBack': 'خوش آمدی',
     'auth.joinLenz': 'همین امروز به لنز بپیوند',
     'auth.passwordMin': 'رمز عبور باید حداقل ۸ کاراکتر باشد',
+    'password.veryWeak': 'بسیار ضعیف',
+    'password.weak': 'ضعیف',
+    'password.medium': 'متوسط',
+    'password.strong': 'قوی',
+    'password.veryStrong': 'بسیار قوی',
+    'password.requirements': 'رمز باید شامل باشد: ۸+ کاراکتر، حرف بزرگ، حرف کوچک، عدد، کاراکتر ویژه',
 
     // Nav
     'nav.home': 'خانه',

@@ -10,8 +10,8 @@ type Post {
   mentions: [String!]!
   location: String
   isReel: Boolean!
-  likesCount: Float!
-  commentsCount: Float!
+  likesCount: Int!
+  commentsCount: Int!
   archived: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -32,7 +32,7 @@ type Like {
 type Comment {
   id: ID!
   text: String!
-  likesCount: Float!
+  likesCount: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
   user: User!
@@ -76,16 +76,16 @@ type Query {
   userByUsername(username: String!): User!
 
   """جستجوی کاربران"""
-  searchUsers(q: String!, limit: Float = 20): [User!]!
+  searchUsers(q: String!, limit: Int = 20): [User!]!
 
   """دریافت یک پست با شناسه"""
   post(id: String!): Post!
 
   """پست‌های یک کاربر"""
-  postsByUser(userId: String!, limit: Float = 20, offset: Float = 0): [Post!]!
+  postsByUser(userId: String!, limit: Int = 20, offset: Int = 0): [Post!]!
 
   """پست‌های یک هشتگ"""
-  postsByHashtag(tag: String!, limit: Float = 20, offset: Float = 0): [Post!]!
+  postsByHashtag(tag: String!, limit: Int = 20, offset: Int = 0): [Post!]!
 
   """آیا کاربر پست را لایک کرده؟"""
   isLiked(postId: String!): Boolean!
@@ -109,10 +109,10 @@ type Query {
   myCloseFriends: [User!]!
 
   """فید شخصی کاربر (پست‌های فالووینگ + خودش)"""
-  feed(limit: Float = 20, offset: Float = 0): FeedResult!
+  feed(limit: Int = 20, offset: Int = 0): FeedResult!
 
   """فید اکسپلور (پست‌های محبوب و جدید همه)"""
-  exploreFeed(limit: Float = 30, offset: Float = 0): FeedResult!
+  exploreFeed(limit: Int = 30, offset: Int = 0): FeedResult!
 }
 
 type Mutation {

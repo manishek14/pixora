@@ -1,4 +1,4 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Query, Resolver, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { FeedService } from './feed.service';
 import { FeedResult } from './feed-result';
@@ -14,16 +14,16 @@ export class FeedResolver {
   @UseGuards(GqlAuthGuard)
   async feed(
     @CurrentUser() user: UserEntity,
-    @Args('limit', { nullable: true, defaultValue: 20 }) limit: number,
-    @Args('offset', { nullable: true, defaultValue: 0 }) offset: number,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
+    @Args('offset', { type: () => Int, nullable: true, defaultValue: 0 }) offset: number,
   ): Promise<FeedResult> {
     return this.feedService.getFeed(user.id, limit, offset);
   }
 
   @Query(() => FeedResult, { description: 'فید اکسپلور (پست‌های محبوب و جدید همه)' })
   async exploreFeed(
-    @Args('limit', { nullable: true, defaultValue: 30 }) limit: number,
-    @Args('offset', { nullable: true, defaultValue: 0 }) offset: number,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 30 }) limit: number,
+    @Args('offset', { type: () => Int, nullable: true, defaultValue: 0 }) offset: number,
   ): Promise<FeedResult> {
     return this.feedService.getExploreFeed(limit, offset);
   }

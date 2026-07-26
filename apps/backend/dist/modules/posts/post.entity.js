@@ -67,12 +67,12 @@ __decorate([
 ], PostEntity.prototype, "isReel", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
-    (0, graphql_1.Field)(() => graphql_1.Float),
+    (0, graphql_1.Field)(() => graphql_1.Int),
     __metadata("design:type", Number)
 ], PostEntity.prototype, "likesCount", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
-    (0, graphql_1.Field)(() => graphql_1.Float),
+    (0, graphql_1.Field)(() => graphql_1.Int),
     __metadata("design:type", Number)
 ], PostEntity.prototype, "commentsCount", void 0);
 __decorate([
