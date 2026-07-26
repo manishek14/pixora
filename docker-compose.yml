@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lenz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lenz
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - lenz-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d lenz']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lenz-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - lenz-redis:/data
+    command: ['redis-server', '--appendonly', 'yes']
+
+  # MinIO (S3-compatible) for media storage in production
+  minio:
+    image: minio/minio:latest
+    container_name: lenz-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: lenz
+      MINIO_ROOT_PASSWORD: lenz-secret-change-me
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - lenz-minio:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  lenz-pg:
+  lenz-redis:
+  lenz-minio:

@@ -1,0 +1,76 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  Relation,
+} from 'typeorm';
+import { Field, ID, ObjectType, Float } from '@nestjs/graphql';
+import { UserEntity } from '../users/user.entity';
+
+@Entity('posts')
+@ObjectType('Post')
+export class PostEntity {
+  @PrimaryGeneratedColumn('uuid')
+  @Field(() => ID)
+  id: string;
+
+  @Column({ type: 'text', nullable: true })
+  @Field({ nullable: true })
+  caption?: string;
+
+  @Column({ type: 'simple-array', default: '' })
+  @Field(() => [String])
+  mediaUrls: string[];
+
+  @Column({ type: 'simple-array', default: '' })
+  @Field(() => [String])
+  hashtags: string[];
+
+  @Column({ type: 'simple-array', default: '' })
+  @Field(() => [String])
+  mentions: string[];
+
+  @Column({ type: 'varchar', nullable: true })
+  @Field({ nullable: true })
+  location?: string;
+
+  @Column({ default: false })
+  @Field()
+  isReel: boolean;
+
+  @Column({ default: 0 })
+  @Field(() => Float)
+  likesCount: number;
+
+  @Column({ default: 0 })
+  @Field(() => Float)
+  commentsCount: number;
+
+  @Column({ default: false })
+  @Field()
+  archived: boolean;
+
+  @CreateDateColumn()
+  @Field()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  @Field()
+  updatedAt: Date;
+
+  @ManyToOne(() => UserEntity, (user) => user.posts, {
+    onDelete: 'CASCADE',
+    eager: true,
+  })
+  @JoinColumn({ name: 'authorId' })
+  @Field(() => UserEntity)
+  author: Relation<UserEntity>;
+
+  @Column({ type: 'uuid' })
+  authorId: string;
+}

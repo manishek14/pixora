@@ -1,0 +1,217 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Post {
+  id: ID!
+  caption: String
+  mediaUrls: [String!]!
+  hashtags: [String!]!
+  mentions: [String!]!
+  location: String
+  isReel: Boolean!
+  likesCount: Float!
+  commentsCount: Float!
+  archived: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  author: User!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Like {
+  id: ID!
+  createdAt: DateTime!
+  user: User!
+}
+
+type Comment {
+  id: ID!
+  text: String!
+  likesCount: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  user: User!
+  replies: [Comment!]
+}
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  fullName: String
+  bio: String
+  avatarUrl: String
+  website: String
+  isPrivate: Boolean!
+  isVerified: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  posts: [Post!]
+}
+
+type AuthPayload {
+  user: User!
+  accessToken: String!
+  refreshToken: String!
+}
+
+type FeedResult {
+  items: [Post!]!
+  hasMore: Boolean!
+}
+
+type Query {
+  """کاربر فعلی"""
+  me: User!
+
+  """دریافت کاربر با شناسه"""
+  user(id: String!): User!
+
+  """دریافت کاربر با نام کاربری"""
+  userByUsername(username: String!): User!
+
+  """جستجوی کاربران"""
+  searchUsers(q: String!, limit: Float = 20): [User!]!
+
+  """دریافت یک پست با شناسه"""
+  post(id: String!): Post!
+
+  """پست‌های یک کاربر"""
+  postsByUser(userId: String!, limit: Float = 20, offset: Float = 0): [Post!]!
+
+  """پست‌های یک هشتگ"""
+  postsByHashtag(tag: String!, limit: Float = 20, offset: Float = 0): [Post!]!
+
+  """آیا کاربر پست را لایک کرده؟"""
+  isLiked(postId: String!): Boolean!
+
+  """لیست لایک‌کنندگان پست"""
+  likers(postId: String!): [Like!]!
+
+  """کامنت‌های یک پست با پاسخ‌ها"""
+  comments(postId: String!): [Comment!]!
+
+  """آیا فالو می‌کند؟"""
+  isFollowing(userId: String!): Boolean!
+
+  """لیست فالوورها"""
+  followers(userId: String!): [User!]!
+
+  """لیست فالووینگ‌ها"""
+  following(userId: String!): [User!]!
+
+  """کلوزفرندز من"""
+  myCloseFriends: [User!]!
+
+  """فید شخصی کاربر (پست‌های فالووینگ + خودش)"""
+  feed(limit: Float = 20, offset: Float = 0): FeedResult!
+
+  """فید اکسپلور (پست‌های محبوب و جدید همه)"""
+  exploreFeed(limit: Float = 30, offset: Float = 0): FeedResult!
+}
+
+type Mutation {
+  """ثبت‌نام کاربر جدید"""
+  register(input: RegisterInput!): AuthPayload!
+
+  """ورود کاربر"""
+  login(input: LoginInput!): AuthPayload!
+
+  """تمدید توکن با refresh token"""
+  refresh(input: RefreshTokenInput!): AuthPayload!
+
+  """خروج و ابطال refresh token"""
+  logout: Boolean!
+
+  """بروزرسانی پروفایل"""
+  updateProfile(input: UpdateProfileInput!): User!
+
+  """بروزرسانی آواتار"""
+  updateAvatar(url: String!): User!
+
+  """ساخت پست جدید"""
+  createPost(input: CreatePostInput!): Post!
+
+  """ویرایش پست"""
+  updatePost(id: String!, input: UpdatePostInput!): Post!
+
+  """حذف پست"""
+  deletePost(id: String!): Boolean!
+
+  """آرشیو/بازگردانی پست"""
+  toggleArchive(id: String!, archive: Boolean!): Post!
+
+  """لایک/آنلایک پست (toggle). true = لایک شد، false = آنلایک شد"""
+  toggleLike(postId: String!): Boolean!
+
+  """ثبت کامنت یا پاسخ"""
+  createComment(input: CreateCommentInput!): Comment!
+
+  """ویرایش کامنت"""
+  updateComment(id: String!, text: String!): Comment!
+
+  """حذف کامنت"""
+  deleteComment(id: String!): Boolean!
+
+  """فالو کردن کاربر"""
+  followUser(userId: String!): Boolean!
+
+  """آنفالو کردن کاربر"""
+  unfollowUser(userId: String!): Boolean!
+
+  """حذف فالوور از لیست خود"""
+  removeFollower(followerId: String!): Boolean!
+
+  """افزودن/حذف به کلوزفرندز"""
+  toggleCloseFriend(userId: String!, isClose: Boolean!): Boolean!
+}
+
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+  fullName: String
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input RefreshTokenInput {
+  refreshToken: String!
+}
+
+input UpdateProfileInput {
+  fullName: String
+  bio: String
+  website: String
+  isPrivate: Boolean
+}
+
+input CreatePostInput {
+  caption: String
+  mediaUrls: [String!]!
+  hashtags: [String!] = []
+  mentions: [String!] = []
+  location: String
+  isReel: Boolean = false
+}
+
+input UpdatePostInput {
+  caption: String
+  hashtags: [String!]
+  mentions: [String!]
+  location: String
+}
+
+input CreateCommentInput {
+  postId: String!
+  text: String!
+  parentId: String
+}

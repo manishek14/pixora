@@ -1,0 +1,78 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Posts {
+  """"""
+  id: ID!
+
+  """"""
+  title: String!
+
+  """"""
+  content: String!
+
+  """"""
+  author: String
+
+  """"""
+  published: Boolean!
+
+  """"""
+  createdAt: String!
+
+  """"""
+  updatedAt: String
+}
+
+type Query {
+  hello: String!
+
+  """دریافت لیست تمام پست ها"""
+  posts: [Posts!]!
+
+  """دریافت یک پست"""
+  post(id: ID!): Posts!
+}
+
+type Mutation {
+  """ساخت یک پست"""
+  createPost(input: CreatePostInput!): Posts!
+
+  """ویرایش یک پست"""
+  updatePost(updateInput: UpdatePostInput!): Posts!
+
+  """حذف یک پست"""
+  removePost(id: ID!): Boolean!
+}
+
+input CreatePostInput {
+  """عنوان پست"""
+  title: String!
+
+  """محتوای پست"""
+  content: String!
+
+  """نویسنده پست"""
+  author: String
+
+  """وضعیت انتشار"""
+  published: Boolean = false
+}
+
+input UpdatePostInput {
+  """عنوان پست"""
+  title: String!
+
+  """محتوای پست"""
+  content: String!
+
+  """نویسنده پست"""
+  author: String
+
+  """وضعیت انتشار"""
+  published: Boolean = false
+
+  """شناسه پست برای بروزرسانی"""
+  id: ID!
+}
