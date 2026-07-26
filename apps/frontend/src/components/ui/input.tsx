@@ -6,29 +6,42 @@ import { cn } from '@/lib/utils';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  /** Optional icon rendered before the input content */
+  leadingIcon?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, id, ...props }, ref) => {
+  ({ className, label, error, id, leadingIcon, ...props }, ref) => {
     const inputId = id || props.name;
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-lenz-dark mb-1.5">
+          <label
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-medium text-lenz-dark"
+          >
             {label}
           </label>
         )}
-        <input
-          ref={ref}
-          id={inputId}
-          className={cn(
-            'w-full h-11 px-3.5 rounded-lg border bg-white text-lenz-dark placeholder:text-lenz-gray focus:outline-none focus:border-lenz-dark/40 transition-colors',
-            error ? 'border-red-500' : 'border-lenz-border',
-            className,
+        <div className="relative">
+          {leadingIcon && (
+            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-lenz-gray">
+              {leadingIcon}
+            </div>
           )}
-          {...props}
-        />
-        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          <input
+            ref={ref}
+            id={inputId}
+            className={cn(
+              'glass-input h-11 w-full px-3.5 text-sm',
+              leadingIcon && 'ps-10',
+              error && '!border-rose-500/70 !bg-rose-500/5',
+              className,
+            )}
+            {...props}
+          />
+        </div>
+        {error && <p className="mt-1 text-xs text-rose-500">{error}</p>}
       </div>
     );
   },
@@ -46,7 +59,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-lenz-dark mb-1.5">
+          <label
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-medium text-lenz-dark"
+          >
             {label}
           </label>
         )}
@@ -54,13 +70,13 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            'w-full px-3.5 py-2.5 rounded-lg border bg-white text-lenz-dark placeholder:text-lenz-gray focus:outline-none focus:border-lenz-dark/40 transition-colors resize-none',
-            error ? 'border-red-500' : 'border-lenz-border',
+            'glass-input w-full resize-none px-3.5 py-2.5 text-sm',
+            error && '!border-rose-500/70 !bg-rose-500/5',
             className,
           )}
           {...props}
         />
-        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+        {error && <p className="mt-1 text-xs text-rose-500">{error}</p>}
       </div>
     );
   },

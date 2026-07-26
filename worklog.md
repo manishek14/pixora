@@ -129,3 +129,66 @@ Stage Summary:
 - Both apps running: backend http://localhost:4000, frontend http://localhost:3000
 - E2E smoke test script saved at `/home/z/my-project/scripts/smoke-test.sh`
 - Ready for Phase 2 development (Stories, Reels, Direct)
+
+---
+Task ID: 13-15
+Agent: main
+Task: Frontend refactor — Fix "Failed to fetch" + Liquid Glass theme system + Auth redesign
+
+Work Log:
+- Backend audit: confirmed schema and resolvers are fully synced with frontend GraphQL queries
+- Fixed security bug in `auth.service.ts refresh()`: now validates refresh token against stored bcrypt hash, so revoked tokens (post-logout) are actually rejected with "session revoked, please log in again"
+- Next.js config: added `/api/graphql` rewrite → `http://localhost:4000/graphql` (eliminates CORS + "Failed to fetch" — browser only talks to its own origin)
+- Apollo Client rewrite (`apollo-provider.tsx`):
+  * HttpLink now uses `/api/graphql` (proxied)
+  * AuthLink: injects `Bearer <token>` on every operation
+  * ErrorLink: catches 401 → calls `tryRefreshToken()` → retries once with new token; non-401 errors mapped to Persian via `error-map.ts` and shown as toast
+  * WeakSet prevents infinite retry loops
+- New `lib/refresh.ts`: serialized refresh-token fetch (single-flight) so concurrent 401s only trigger one refresh
+- New `lib/error-map.ts`: regex-based mapping of backend messages → Persian (network errors, auth errors, validation, etc.)
+- New `lib/toast-store.ts` + `components/ui/toaster.tsx`: lightweight toast system (useSyncExternalStore, no provider needed), liquid-glass-styled, top-center stack
+- next-themes installed; `lib/theme-provider.tsx` wraps app with `attribute="class"`, `defaultTheme="dark"`, `enableSystem`
+- `app/layout.tsx`: added inline no-flash script + `<Toaster />` mounted once at root
+- `globals.css` rewrite (300+ lines):
+  * Dark (default) + Light + Auto(theme=system) theme tokens via CSS variables
+  * Telegram Blue accent (#2AABEE dark / #1E95D6 light)
+  * Liquid glass utilities: `.glass-card`, `.glass-card--raised`, `.glass-card--subtle`, `.glass-input`, `.glass-btn-primary`, `.glass-btn-ghost`, `.glass-dock`
+  * Specular highlight via ::before, ambient aurora background via body::before
+  * Tailwind dark mode = 'class' (works with next-themes)
+- `tailwind.config.ts`: colors mapped to CSS variables for theme-aware utility classes
+- UI components updated: Button (uses glass-btn-primary/ghost), Input/Textarea (uses glass-input), Avatar (dark-mode-safe colors)
+- New `ThemeToggle` component (compact single-button and segmented variants)
+- Login + Register pages redesigned:
+  * Glass-card with --raised variant, specular shine
+  * Decorative blurred blobs (Telegram Blue) in background
+  * Leading icons on inputs (Mail, Lock, User, AtSign)
+  * Top-right ThemeToggle
+  * Submit button uses glass-btn-primary with gradient + glow
+  * On success: toast.success(welcomeBack) + redirect
+  * On error: inline error box + toast.error(persian message)
+- Sidebar redesigned:
+  * Glass dock surface (rounded-3xl, m-3 inset from screen edge)
+  * Active nav item: bg-lenz-primary/15 + drop-shadow glow
+  * Footer: ThemeToggle compact, locale toggle, logout (rose), user mini-card
+- MobileNav redesigned: floating glass dock at bottom, m-3 inset
+- AppShell: loading state shows animated logo + loading bar; redirects to /login when unauthenticated
+- i18n: added theme.toggle, theme.dark, theme.light, theme.system keys (fa/en)
+- Created `scripts/dev-up.sh`: starts backend + frontend together, waits, runs smoke test, saves PIDs
+
+Stage Summary:
+- "Failed to fetch" root cause was Apollo Client hitting `localhost:4000` directly. Fixed via Next.js proxy + Apollo Link chain.
+- Refresh-on-401 auto-refresh logic implemented and tested.
+- Backend refresh bug fixed: revoked refresh tokens now actually rejected.
+- All auth flows verified E2E via proxied /api/graphql:
+  * register → returns JWT ✓
+  * login → returns JWT ✓
+  * me with access token ✓
+  * logout → revokes refresh in DB ✓
+  * refresh AFTER logout → 401 "session revoked" ✓ (previously was a bug!)
+  * refresh with fresh login → returns new access token ✓
+  * wrong password → 401 "invalid credentials" → mapped to "ایمیل یا رمز عبور اشتباه است." ✓
+  * duplicate registration → 409 → mapped to "این ایمیل یا نام کاربری قبلاً ثبت شده است." ✓
+- Liquid Glass CSS properly compiled (verified via /_next/static/css): glass-card, glass-input, glass-btn-primary, glass-dock all present
+- Theme tokens verified: Dark (#0a0d12 bg, #2aabee primary), Light (#eef2f7 bg, #1e95d6 primary)
+- Build: 10 routes compile successfully, ~155KB First Load JS
+- Both services running: backend http://localhost:4000, frontend http://localhost:3000

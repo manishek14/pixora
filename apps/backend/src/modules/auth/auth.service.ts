@@ -76,8 +76,23 @@ export class AuthService {
       throw new UnauthorizedException('invalid or expired refresh token');
     }
 
-    const user = await this.userRepo.findOne({ where: { id: payload.sub } });
+    // Fetch user WITH the stored (hashed) refresh token for revocation check
+    const user = await this.userRepo
+      .createQueryBuilder('u')
+      .addSelect('u.refreshToken')
+      .where('u.id = :id', { id: payload.sub })
+      .getOne();
     if (!user) throw new UnauthorizedException('user not found');
+
+    // Reject if user has logged out (refresh token cleared in DB) OR
+    // if the provided token doesn't match the stored hash (rotated elsewhere)
+    if (!user.refreshToken) {
+      throw new UnauthorizedException('session revoked, please log in again');
+    }
+    const matches = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!matches) {
+      throw new UnauthorizedException('session revoked, please log in again');
+    }
 
     return this.buildPayload(user);
   }

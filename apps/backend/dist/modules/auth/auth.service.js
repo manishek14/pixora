@@ -106,9 +106,20 @@ let AuthService = AuthService_1 = class AuthService {
         catch {
             throw new common_1.UnauthorizedException('invalid or expired refresh token');
         }
-        const user = await this.userRepo.findOne({ where: { id: payload.sub } });
+        const user = await this.userRepo
+            .createQueryBuilder('u')
+            .addSelect('u.refreshToken')
+            .where('u.id = :id', { id: payload.sub })
+            .getOne();
         if (!user)
             throw new common_1.UnauthorizedException('user not found');
+        if (!user.refreshToken) {
+            throw new common_1.UnauthorizedException('session revoked, please log in again');
+        }
+        const matches = await bcrypt.compare(refreshToken, user.refreshToken);
+        if (!matches) {
+            throw new common_1.UnauthorizedException('session revoked, please log in again');
+        }
         return this.buildPayload(user);
     }
     async logout(userId) {

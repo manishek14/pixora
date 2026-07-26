@@ -12,7 +12,7 @@ interface AvatarProps {
 }
 
 export function Avatar({ src, alt, size = 'md', hasStory, className, onClick }: AvatarProps) {
-  const sizes = {
+  const sizes: Record<string, string> = {
     xs: 'w-6 h-6',
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -23,7 +23,7 @@ export function Avatar({ src, alt, size = 'md', hasStory, className, onClick }: 
   const Inner = (
     <div
       className={cn(
-        'relative rounded-full overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center',
+        'relative flex items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-slate-700 to-slate-800',
         sizes[size],
         !src && 'text-lenz-gray',
       )}
@@ -31,9 +31,9 @@ export function Avatar({ src, alt, size = 'md', hasStory, className, onClick }: 
     >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt} className="w-full h-full object-cover" />
+        <img src={src} alt={alt} className="h-full w-full object-cover" />
       ) : (
-        <span className="text-sm font-medium uppercase">
+        <span className="text-sm font-semibold uppercase text-zinc-300">
           {alt.slice(0, 1)}
         </span>
       )}

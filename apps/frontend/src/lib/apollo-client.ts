@@ -1,5 +1,5 @@
-// Token management utilities used by client-side code
-// (the Apollo client itself is created in /src/app/apollo-provider.tsx)
+// Token management + endpoint constants used by client-side code.
+// The Apollo client itself is created in /src/app/apollo-provider.tsx.
 
 const TOKEN_KEY = 'lenz_access_token';
 const REFRESH_TOKEN_KEY = 'lenz_refresh_token';
@@ -26,5 +26,17 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
-export const BACKEND_URL =
-  process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql';
+// IMPORTANT: We deliberately route through Next.js's own origin (/api/graphql)
+// rather than hitting the backend port directly. The Next.js dev server proxies
+// this to http://localhost:4000/graphql (see next.config.mjs → rewrites()).
+// This kills CORS preflights AND avoids "Failed to fetch" when the user's
+// browser cannot reach port 4000 directly (adblockers, proxy environments,
+// remote dev containers with only :3000 forwarded, etc).
+export const GRAPHQL_ENDPOINT = '/api/graphql';
+
+// Keep BACKEND_URL as an alias for backwards-compat with any older imports.
+export const BACKEND_URL = GRAPHQL_ENDPOINT;
+
+// Upload endpoint (also proxied through Next.js).
+export const UPLOAD_ENDPOINT = '/api/uploads/multiple';
+export const UPLOAD_SINGLE_ENDPOINT = '/api/uploads/single';

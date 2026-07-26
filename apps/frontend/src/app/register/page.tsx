@@ -9,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
 import { REGISTER } from '@/graphql/auth';
-import { Camera, Eye, EyeOff } from 'lucide-react';
+import { toPersianError } from '@/lib/error-map';
+import { toast } from '@/lib/toast-store';
+import { Camera, Eye, EyeOff, Mail, Lock, User, AtSign } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function RegisterPage() {
   const { t } = useI18n();
@@ -42,99 +45,136 @@ export default function RegisterPage() {
       });
       if (data?.register) {
         login(data.register.accessToken, data.register.refreshToken);
+        toast.success(t('auth.welcomeBack'));
         router.push('/');
       }
-    } catch (err: any) {
-      setError(err?.message || t('auth.registerFailed'));
+    } catch (err: unknown) {
+      const msg = toPersianError(err);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-lenz-bg">
-      <div className="w-full max-w-sm">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      {/* Top-right theme toggle */}
+      <div className="absolute end-4 top-4 z-10">
+        <ThemeToggle compact />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm animate-[fade-in_400ms_cubic-bezier(0.16,1,0.3,1)]">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-lenz-gradient items-center justify-center mb-4">
-            <Camera className="w-8 h-8 text-white" />
+        <div className="mb-6 text-center">
+          <div
+            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_8px_24px_rgba(42,171,238,0.45)]"
+            style={{
+              background: 'linear-gradient(135deg, #2AABEE 0%, #4FC3F7 100%)',
+            }}
+          >
+            <Camera className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-4xl font-bold lenz-gradient-text">{t('app.name')}</h1>
-          <p className="text-lenz-gray mt-2">{t('auth.joinLenz')}</p>
+          <h1 className="text-4xl font-extrabold lenz-gradient-text">{t('app.name')}</h1>
+          <p className="mt-2 text-sm text-lenz-gray">{t('auth.joinLenz')}</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white border border-lenz-border rounded-2xl p-6 space-y-4"
-        >
-          <Input
-            name="username"
-            label={t('auth.username')}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="ali_dev"
-            required
-            minLength={3}
-            maxLength={30}
-            pattern="[a-zA-Z0-9_.]+"
-            autoFocus
-          />
-          <Input
-            type="email"
-            name="email"
-            label={t('auth.email')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-            autoComplete="email"
-          />
-          <Input
-            name="fullName"
-            label={t('auth.fullName')}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Ali Developer"
-            maxLength={100}
-          />
-          <div className="relative">
+        {/* Glass card */}
+        <form onSubmit={handleSubmit} className="glass-card glass-card--raised p-7">
+          <div className="space-y-3.5">
             <Input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              label={t('auth.password')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              name="username"
+              label={t('auth.username')}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="ali_dev"
               required
-              minLength={8}
-              autoComplete="new-password"
-              className="pr-10"
+              minLength={3}
+              maxLength={30}
+              pattern="[a-zA-Z0-9_.]+"
+              autoFocus
+              leadingIcon={<AtSign className="h-4 w-4" />}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute end-3 top-[34px] text-lenz-gray hover:text-lenz-dark"
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
+            <Input
+              type="email"
+              name="email"
+              label={t('auth.email')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              autoComplete="email"
+              leadingIcon={<Mail className="h-4 w-4" />}
+            />
+            <Input
+              name="fullName"
+              label={t('auth.fullName')}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Ali Developer"
+              maxLength={100}
+              leadingIcon={<User className="h-4 w-4" />}
+            />
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                label={t('auth.password')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="pe-10"
+                leadingIcon={<Lock className="h-4 w-4" />}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 end-3 top-[26px] flex items-center text-lenz-gray transition hover:text-lenz-dark"
+                aria-label={showPassword ? 'hide' : 'show'}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {error && (
+              <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-sm text-rose-400">
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" fullWidth size="lg" loading={loading}>
+              {t('auth.signup')}
+            </Button>
+
+            <p className="pt-1 text-center text-xs text-lenz-gray">
+              {t('auth.passwordMin')}
+            </p>
           </div>
-
-          {error && (
-            <p className="text-sm text-red-500 bg-red-50 rounded-md p-2">{error}</p>
-          )}
-
-          <Button type="submit" fullWidth size="lg" loading={loading}>
-            {t('auth.signup')}
-          </Button>
         </form>
 
-        <p className="text-center mt-6 text-sm text-lenz-gray">
+        <p className="mt-6 text-center text-sm text-lenz-gray">
           {t('auth.haveAccount')}{' '}
-          <Link href="/login" className="text-lenz-primary font-semibold hover:underline">
+          <Link
+            href="/login"
+            className="font-semibold text-lenz-primary transition hover:opacity-80"
+          >
             {t('auth.login')}
           </Link>
         </p>
       </div>
+
+      {/* Decorative blurred blobs */}
+      <div
+        className="pointer-events-none absolute -start-32 top-1/4 h-80 w-80 rounded-full opacity-30 blur-[100px]"
+        style={{ background: 'radial-gradient(circle, #2AABEE 0%, transparent 70%)' }}
+      />
+      <div
+        className="pointer-events-none absolute -end-32 bottom-1/4 h-80 w-80 rounded-full opacity-25 blur-[100px]"
+        style={{ background: 'radial-gradient(circle, #4FC3F7 0%, transparent 70%)' }}
+      />
     </main>
   );
 }

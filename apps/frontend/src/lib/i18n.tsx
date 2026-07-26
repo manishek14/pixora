@@ -108,6 +108,12 @@ const dict: Record<Locale, Record<string, string>> = {
     'story.add': 'Your story',
     'story.viewAll': 'View all',
 
+    // Theme
+    'theme.toggle': 'Toggle theme',
+    'theme.dark': 'Dark',
+    'theme.light': 'Light',
+    'theme.system': 'System',
+
     // Errors
     'error.required': 'This field is required',
     'error.invalid': 'Invalid value',
@@ -203,6 +209,12 @@ const dict: Record<Locale, Record<string, string>> = {
     // Story
     'story.add': 'استوری تو',
     'story.viewAll': 'مشاهده همه',
+
+    // Theme
+    'theme.toggle': 'تغییر تم',
+    'theme.dark': 'تیره',
+    'theme.light': 'روشن',
+    'theme.system': 'سیستم',
 
     // Errors
     'error.required': 'این فیلد الزامی است',
