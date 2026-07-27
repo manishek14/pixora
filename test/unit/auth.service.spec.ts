@@ -14,6 +14,11 @@ import { PostEntity } from '@/modules/posts/post.entity';
 import { LikeEntity } from '@/modules/likes/like.entity';
 import { CommentEntity } from '@/modules/comments/comment.entity';
 import { FollowEntity } from '@/modules/follows/follow.entity';
+import { StoryEntity } from '@/modules/stories/entities/story.entity';
+import { StoryViewEntity } from '@/modules/stories/entities/story-view.entity';
+import { StoryReactionEntity } from '@/modules/stories/entities/story-reaction.entity';
+import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity';
+import { HighlightItemEntity } from '@/modules/highlights/entities/highlight-item.entity';
 import { RegisterInput } from '@/modules/auth/dto/register.input';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 
@@ -92,7 +97,18 @@ describe('AuthService', () => {
         TypeOrmModule.forRoot({
           type: 'better-sqlite3',
           database: ':memory:',
-          entities: [UserEntity, PostEntity, LikeEntity, CommentEntity, FollowEntity],
+          entities: [
+            UserEntity,
+            PostEntity,
+            LikeEntity,
+            CommentEntity,
+            FollowEntity,
+            StoryEntity,
+            StoryViewEntity,
+            StoryReactionEntity,
+            HighlightEntity,
+            HighlightItemEntity,
+          ],
           synchronize: true,
           logging: false,
         }),

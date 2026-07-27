@@ -337,3 +337,70 @@ Stage Summary:
 - Backend still runs cleanly on http://localhost:4000/graphql
 - Known issue documented in test file: refresh-token rotation within the same second is weak (JWT iat is in seconds) — TODO for Phase 2 hardening
 - Ready to enter Phase 2 (Stories / Highlights / Reactions)
+
+---
+Task ID: 19
+Agent: main
+Task: Phase 2 — Stories, Highlights, Reactions, Close-Friends segmentation
+
+Work Log:
+- Added two new modules: src/modules/stories/ and src/modules/highlights/
+- Stories module entities (3):
+  * StoryEntity: id, authorId, mediaUrl, mediaType (enum Image|Video), caption, visibility (enum Public|CloseFriends), expiresAt (24h TTL), views[], reactions[]. Computed (non-persisted) fields: viewsCount, isViewedByMe, isExpired.
+  * StoryViewEntity: (storyId, userId) unique — idempotent view tracking
+  * StoryReactionEntity: (storyId, userId) unique — one emoji per user per story; replacing emoji updates the row
+- Highlights module entities (2):
+  * HighlightEntity: id, userId, title, coverUrl, items[] (OneToMany, eager, cascade)
+  * HighlightItemEntity: id, highlightId, mediaUrl, mediaType (enum Image|Video), caption, order — media is COPIED from source story so highlight survives story expiration
+- Registered TS enums via registerEnumType (StoryMediaType, StoryVisibility, HighlightMediaType) — exposed to GraphQL using the TS enum NAMES (Image/Video/Public/CloseFriends), not the underlying string values
+- Extended UserEntity with stories[] and highlights[] OneToMany relations
+- Added isOnCloseFriendsList(ownerId, viewerId) helper to FollowsService — checks if ownerId follows viewerId AND has marked them as isCloseFriend=true. Owner always sees their own stories (returns true if ownerId === viewerId)
+- StoriesService (cron-decorated):
+  * create(authorId, input): builds story with 24h expiresAt, persists, then RELOADS with author relation (because save() doesn't populate eager relations)
+  * delete(authorId, storyId): author-only, throws Forbidden otherwise
+  * view(viewerId, storyId): visibility-checked, idempotent (uses unique constraint), then RELOADS story with fresh views relation so viewsCount is accurate (initial impl returned stale count — bug fixed in iteration)
+  * react(viewerId, storyId, emoji): upserts one emoji per user per story; ALSO auto-marks the story as viewed (matches Instagram UX)
+  * removeReaction(viewerId, storyId)
+  * getFeed(viewerId): me + users I follow, filtered by visibility (close_friends stories visible only if viewer is on author's CF list — uses a per-author cache to avoid N+1 queries)
+  * getActiveByUser(viewerId, userId), getById(viewerId, storyId): single-story fetch with visibility check
+  * getViewers(authorId, storyId): author-only, returns StoryViewEntity[] with user relation
+  * @Cron(EVERY_HOUR) cleanupExpiredStories(): hard-deletes stories whose expiresAt is older than 24h grace period
+- HighlightsService:
+  * create(userId, input): validates non-empty items, creates highlight + items in order (uses `order: it.order ?? idx` to allow explicit ordering or fall back to array index)
+  * update(userId, highlightId, input): partial update — title/coverUrl patchy, items array fully replaces old items
+  * delete(userId, highlightId): author-only, cascade-deletes items
+  * createFromStories(userId, title, storyIds, coverUrl?): loads stories by id+authorId (refuses to leak existence of stories owned by others — throws NotFound if any story is missing or owned by someone else), maps StoryMediaType → HighlightMediaType (same string values, different enum types), copies media+caption into new HighlightItem rows
+  * getByUser(userId): public — anyone can browse a user's highlights
+  * getById(highlightId): public
+  * findOneOwned(userId, highlightId): helper for owner-only mutations
+- Resolver surfaces:
+  * Stories: storiesFeed (grouped by author, viewer first), userStories, story, storyViewers (author only), createStory, deleteStory, viewStory, reactToStory, removeStoryReaction — all @UseGuards(GqlAuthGuard)
+  * Highlights: highlightsByUser, highlight, createHighlight, createHighlightFromStories, updateHighlight, deleteHighlight — all @UseGuards(GqlAuthGuard)
+- AppModule updated: imported StoriesModule + HighlightsModule
+- All GraphQL field resolvers use Int (not Float) for any future numeric fields
+- Wrote 37 new unit tests across test/unit/stories.service.spec.ts (20 tests) + test/unit/highlights.service.spec.ts (17 tests):
+  * Story: create defaults, visibility=close_friends, feed visibility (public visible to all, close_friends hidden from non-CF, shown to CF, always shown to author), viewer-first ordering, hasUnviewed indicator, idempotent view, NotFound on CF story for non-CF viewer, react upserts + replaces, removeReaction, delete author-only, expired story NotFound + excluded from feed, getViewers author-only, cron cleanup
+  * Highlight: create with multiple items in order, empty-items rejected, update title-only keeps items, update replaces items (verifies old items gone), owner-only mutations, cascade delete items, createFromStories copies media in order, createFromStories rejects missing/foreign stories, highlight survives source-story deletion, getByUser returns all, public read
+- Wrote 23 new e2e tests in test/e2e/phase2.e2e-spec.ts covering the full GraphQL surface:
+  * Setup: register alice/bob/carol, build follow graph (bob+carol follow alice; alice follows bob to enable close-friend marking; alice marks bob only)
+  * Stories: create public + close_friends, feed visibility (bob sees both, carol sees only public), view increments + idempotent, view CF story rejected for carol (NotFound), react auto-views, author-only viewers list, delete author-only, forbidden cross-user delete
+  * Highlights: create with 3 items ordered, empty-items rejected, public read by id, public list by user, partial update (title only), owner-only update, createFromStories (copies media in order), createFromStories rejects foreign stories (NotFound), delete author-only, forbidden cross-user delete
+- Fixed several bugs found via tests:
+  1. registerEnumType exposed TS enum names as GraphQL values — tests initially used UPPER_CASE strings (IMAGE/PUBLIC), corrected to TS enum names (Image/Public/CloseFriends)
+  2. StoriesService.create() returned the entity without eager-loaded author → "Cannot return null for non-nullable field Story.author" — added explicit reload after save
+  3. StoriesService.view() returned stale viewsCount (used the story loaded BEFORE the view insert) — added reload after view insert
+  4. StoriesService.react() also returned stale viewsCount + didn't auto-view — added reload + auto-view insert
+  5. HighlightItemInput.order had defaultValue: 0 in @Field, which GraphQL filled in as 0 when client omitted it, breaking the `it.order ?? idx` fallback in service — removed defaultValue so undefined is properly propagated
+  6. HighlightEntity.items eager load didn't guarantee order by `order` column (TypeORM eager load doesn't support per-relation ordering in all drivers) — switched findOneOwned/getByUser/getById to manually load items with explicit order clause
+  7. auth.service.spec.ts unit test only registered 5 entities — UserEntity's new stories/highlights relations caused "Entity metadata not found" TypeORM errors — added all 10 entities to the test TypeORM config
+- Updated worklog
+
+Stage Summary:
+- Phase 2 backend complete: Stories, Highlights, Reactions, Close-Friends segmentation all wired and tested
+- 5 new entities (Story, StoryView, StoryReaction, Highlight, HighlightItem), 2 new modules (StoriesModule, HighlightsModule), 9 new GraphQL operations (6 queries + 8 mutations across both modules)
+- Visibility model implemented: public stories visible to all followers; close_friends stories visible only to viewers on author's close-friends list; NotFound (not Forbidden) returned for unauthorized access to avoid leaking existence
+- Story lifecycle: 24h TTL with hourly cron cleanup; views tracked idempotently (one row per (storyId, userId)); reactions upsert (one emoji per (storyId, userId)); reacting also auto-views the story
+- Highlight lifecycle: media COPIED from source story at creation time, so highlight survives story expiration/deletion; items always ordered by `order` column
+- Test totals: 55 unit (18 auth + 20 stories + 17 highlights) + 29 e2e (6 phase-1 + 23 phase-2) = 84 tests, all green
+- Backend still boots cleanly on http://localhost:4000/graphql and responds HTTP 200
+- Ready for Phase 3 (Reels + Bookmarks + Enhanced Explore)

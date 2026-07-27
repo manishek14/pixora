@@ -15,6 +15,8 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { FollowsModule } from './modules/follows/follows.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { StoriesModule } from './modules/stories/stories.module';
+import { HighlightsModule } from './modules/highlights/highlights.module';
 
 @Module({
   imports: [
@@ -66,6 +68,8 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     FollowsModule,
     FeedModule,
     UploadsModule,
+    StoriesModule,
+    HighlightsModule,
   ],
 })
 export class AppModule {}

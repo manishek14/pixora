@@ -13,6 +13,8 @@ import { PostEntity } from '../posts/post.entity';
 import { LikeEntity } from '../likes/like.entity';
 import { CommentEntity } from '../comments/comment.entity';
 import { FollowEntity } from '../follows/follow.entity';
+import { StoryEntity } from '../stories/entities/story.entity';
+import { HighlightEntity } from '../highlights/entities/highlight.entity';
 
 @Entity('users')
 @ObjectType('User')
@@ -85,4 +87,11 @@ export class UserEntity {
 
   @OneToMany(() => FollowEntity, (follow) => follow.following)
   followers: Relation<FollowEntity>[];
+
+  // Phase 2 relations
+  @OneToMany(() => StoryEntity, (story) => story.author)
+  stories: Relation<StoryEntity>[];
+
+  @OneToMany(() => HighlightEntity, (highlight) => highlight.user)
+  highlights: Relation<HighlightEntity>[];
 }

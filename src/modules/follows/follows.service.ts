@@ -110,4 +110,22 @@ export class FollowsService {
     });
     return follows.map((f) => f.following);
   }
+
+  /**
+   * Returns true if `viewerId` is on `ownerId`'s close-friends list.
+   *
+   * In the current data model, ownerId marks a followed user as close — so
+   * `viewerId` is on `ownerId`'s close-friends list iff ownerId follows
+   * viewerId AND has set isCloseFriend=true on that follow relationship.
+   *
+   * Used by the Stories module to gate `close_friends`-visibility stories:
+   * only viewers on the author's close-friends list can see them.
+   */
+  async isOnCloseFriendsList(ownerId: string, viewerId: string): Promise<boolean> {
+    if (ownerId === viewerId) return true; // author always sees their own stories
+    const count = await this.followRepo.count({
+      where: { followerId: ownerId, followingId: viewerId, isCloseFriend: true },
+    });
+    return count > 0;
+  }
 }

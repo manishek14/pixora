@@ -39,6 +39,66 @@ type Comment {
   replies: [Comment!]
 }
 
+type StoryView {
+  id: ID!
+  user: User!
+  viewedAt: DateTime!
+}
+
+type Story {
+  id: ID!
+  author: User!
+  mediaUrl: String!
+  mediaType: StoryMediaType!
+  caption: String
+  visibility: StoryVisibility!
+  expiresAt: DateTime!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  viewsCount: Int
+  isViewedByMe: Boolean
+  isExpired: Boolean
+}
+
+"""image | video"""
+enum StoryMediaType {
+  Image
+  Video
+}
+
+"""
+public | close_friends — close_friends only visible to viewers on author’s close-friends list
+"""
+enum StoryVisibility {
+  Public
+  CloseFriends
+}
+
+type HighlightItem {
+  id: ID!
+  mediaUrl: String!
+  mediaType: HighlightMediaType!
+  caption: String
+  order: Int!
+  createdAt: DateTime!
+}
+
+"""image | video"""
+enum HighlightMediaType {
+  Image
+  Video
+}
+
+type Highlight {
+  id: ID!
+  user: User!
+  title: String!
+  coverUrl: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  items: [HighlightItem!]!
+}
+
 type User {
   id: ID!
   username: String!
@@ -63,6 +123,14 @@ type AuthPayload {
 type FeedResult {
   items: [Post!]!
   hasMore: Boolean!
+}
+
+type UserStoriesGroup {
+  userId: ID!
+  user: User!
+  stories: [Story!]!
+  storiesCount: Int!
+  hasUnviewed: Boolean!
 }
 
 type Query {
@@ -113,6 +181,26 @@ type Query {
 
   """فید اکسپلور (پست‌های محبوب و جدید همه)"""
   exploreFeed(limit: Int = 30, offset: Int = 0): FeedResult!
+
+  """
+  فید استوری: استوری‌های فعال خودم + کاربرانی که فالو می‌کنم، گروه‌بندی شده بر اساس نویسنده
+  """
+  storiesFeed: [UserStoriesGroup!]!
+
+  """استوری‌های فعال یک کاربر (در صورت مجاز بودن مشاهده)"""
+  userStories(userId: ID!): [Story!]!
+
+  """یک استوری بر اساس id (در صورت مجاز بودن مشاهده)"""
+  story(id: ID!): Story
+
+  """لیست مشاهده‌کنندگان یکی از استوری‌های خودم (فقط نویسنده)"""
+  storyViewers(storyId: ID!): [StoryView!]!
+
+  """هایلایت‌های یک کاربر (عمومی)"""
+  highlightsByUser(userId: ID!): [Highlight!]!
+
+  """یک هایلایت بر اساس id"""
+  highlight(id: ID!): Highlight
 }
 
 type Mutation {
@@ -169,6 +257,37 @@ type Mutation {
 
   """افزودن/حذف به کلوزفرندز"""
   toggleCloseFriend(userId: String!, isClose: Boolean!): Boolean!
+
+  """ایجاد استوری جدید (انقضا: ۲۴ ساعت)"""
+  createStory(input: CreateStoryInput!): Story!
+
+  """حذف استوری خودم"""
+  deleteStory(id: ID!): Boolean!
+
+  """علامت‌گذاری استوری به عنوان دیده‌شده (idempotent)"""
+  viewStory(storyId: ID!): Story!
+
+  """
+  واکنش (emoji) به استوری — یک واکنش برای هر کاربر/استوری، آپدیت جایگزین می‌کند
+  """
+  reactToStory(storyId: ID!, emoji: String!): Story!
+
+  """حذف واکنش به استوری"""
+  removeStoryReaction(storyId: ID!): Boolean!
+
+  """ایجاد هایلایت جدید با آیتم‌های مشخص‌شده"""
+  createHighlight(input: CreateHighlightInput!): Highlight!
+
+  """
+  ساخت هایلایت از روی استوری‌های خودم — مدیا از استوری کپی می‌شود تا هایلایت بعد از انقضای استوری باقی بماند
+  """
+  createHighlightFromStories(title: String!, storyIds: [ID!]!, coverUrl: String): Highlight!
+
+  """ویرایش هایلایت خودم (عنوان/کاور/آیتم‌ها)"""
+  updateHighlight(id: ID!, input: UpdateHighlightInput!): Highlight!
+
+  """حذف هایلایت خودم"""
+  deleteHighlight(id: ID!): Boolean!
 }
 
 input RegisterInput {
@@ -214,4 +333,30 @@ input CreateCommentInput {
   postId: String!
   text: String!
   parentId: String
+}
+
+input CreateStoryInput {
+  mediaUrl: String!
+  mediaType: StoryMediaType!
+  caption: String
+  visibility: StoryVisibility = Public
+}
+
+input CreateHighlightInput {
+  title: String!
+  coverUrl: String
+  items: [HighlightItemInput!]!
+}
+
+input HighlightItemInput {
+  mediaUrl: String!
+  mediaType: HighlightMediaType!
+  caption: String
+  order: Float
+}
+
+input UpdateHighlightInput {
+  title: String
+  coverUrl: String
+  items: [HighlightItemInput!]
 }
