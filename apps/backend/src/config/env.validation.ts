@@ -24,6 +24,8 @@ export const envValidation = Joi.object({
   UPLOAD_DIR: Joi.string().default('./uploads'),
   MAX_FILE_SIZE: Joi.number().default(50_000_000),
 
-  // Frontend URL (for CORS)
+  // Allowed client origin for CORS (any GraphQL/REST client).
+  // The backend currently accepts all origins (`origin: true` in main.ts), but
+  // this is kept for production hardening.
   FRONTEND_URL: Joi.string().default('http://localhost:3000'),
 });

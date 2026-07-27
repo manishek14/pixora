@@ -240,3 +240,43 @@ Stage Summary:
 - NEW: Strong password enforcement on both frontend (UX: live meter + disabled button) and backend (security: class-validator regex)
 - Both services running: backend http://localhost:4000, frontend http://localhost:3000
 - The post-registration bounce is gone — user lands on home page and the FEED query succeeds, no error toast
+
+---
+Task ID: 17
+Agent: main
+Task: Remove frontend from project, continue backend-only
+
+Work Log:
+- Stopped all frontend processes (next dev)
+- Deleted `/home/z/my-project/apps/frontend/` entirely (source, node_modules, package-lock, tailwind config, etc.)
+- Deleted frontend-only scripts: `scripts/start-frontend.sh`, `scripts/dev-up.sh`
+- Kept `scripts/start-backend.sh`, `scripts/smoke-test.sh`, `scripts/verify-fixes.sh`
+- Updated `scripts/smoke-test.sh`:
+  * Bumped passwords from `password123` → `Str0ng!Pass` to satisfy the new strong-password policy
+  * Removed the `WEB` variable and the "Frontend: http://localhost:3000" final echo
+  * Added explicit "Backend-only" framing in the success banner
+- Updated `README.md`:
+  * Removed all frontend references (Next.js, Apollo, Tailwind, i18n context, frontend env vars)
+  * Updated architecture tree to show only `apps/backend/`
+  * Removed "2. Frontend" section from Quick Start
+  * Added explicit note at the top: "The frontend was removed from this project. The repo now contains only the backend (NestJS + GraphQL). You can interact with the API via the GraphQL Playground at http://localhost:4000/graphql, Postman, or any GraphQL client."
+  * Tech stack table now lists only backend layers
+- Updated `apps/backend/src/config/env.validation.ts`: kept `FRONTEND_URL` env var (still useful for CORS hardening in prod) but updated the comment to reflect that the backend currently accepts all origins and that this var is reserved for future restriction
+- Rebuilt backend with `npx nest build` and restarted — verified `__typename` query returns successfully
+- Ran full smoke test (8 steps) end-to-end against a freshly cleared SQLite DB:
+  1. Register sara → ✓ (strong password accepted)
+  2. Register reza → ✓
+  3. Sara follows Reza → ✓
+  4. Reza creates post with hashtags + mention → ✓ (auto-extraction works)
+  5. Sara likes post → ✓
+  6. Sara comments → ✓
+  7. Sara reads feed → ✓ (shows Reza's post with likes=1, comments=1, hashtags=[first,hello])
+  8. Search by #first hashtag → ✓ (returns the post)
+- All tests pass backend-only, no proxy, no frontend
+
+Stage Summary:
+- Project is now backend-only: `apps/backend/` + `docker-compose.yml` + `scripts/` (3 scripts) + `README.md`
+- Backend fully self-sufficient: GraphQL Playground at http://localhost:4000/graphql for interactive testing, REST upload endpoints at /api/uploads/*
+- Strong-password policy and Int-typed pagination args preserved from previous task
+- Smoke test verifies the full social-graph flow (register → follow → post → like → comment → feed → hashtag search) in <2s
+- Ready to continue Phase 2 backend work (Stories, Highlights, Reactions) or any other backend-driven feature

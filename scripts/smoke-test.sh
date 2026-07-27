@@ -1,34 +1,35 @@
 #!/usr/bin/env bash
-# End-to-end smoke test for Lenz
+# End-to-end smoke test for Lenz backend (GraphQL API on :4000).
+# Note: passwords must meet the strong-password policy
+# (>=8 chars, lowercase, uppercase, digit, special char).
 set -euo pipefail
 
 API="http://localhost:4000/graphql"
-WEB="http://localhost:3000"
 
 echo "============================================================"
-echo "  Lenz E2E Smoke Test"
+echo "  Lenz Backend E2E Smoke Test"
 echo "============================================================"
 
 # 1. Register user A
 echo ""
 echo "[1/8] Register user 'sara'"
 REG_A=$(curl -s -X POST $API -H "Content-Type: application/json" -d '{
-  "query": "mutation { register(input: { username: \"sara\", email: \"sara@test.com\", password: \"password123\", fullName: \"Sara Test\" }) { user { id username } accessToken refreshToken } }"
+  "query": "mutation { register(input: { username: \"sara\", email: \"sara@test.com\", password: \"Str0ng!Pass\", fullName: \"Sara Test\" }) { user { id username } accessToken refreshToken } }"
 }')
 TOKEN_A=$(echo "$REG_A" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['register']['accessToken'])")
 USER_A_ID=$(echo "$REG_A" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['register']['user']['id'])")
-echo "  ✓ user id: $USER_A_ID"
-echo "  ✓ token: ${TOKEN_A:0:20}..."
+echo "  user id: $USER_A_ID"
+echo "  token: ${TOKEN_A:0:20}..."
 
 # 2. Register user B
 echo ""
 echo "[2/8] Register user 'reza'"
 REG_B=$(curl -s -X POST $API -H "Content-Type: application/json" -d '{
-  "query": "mutation { register(input: { username: \"reza\", email: \"reza@test.com\", password: \"password123\", fullName: \"Reza Test\" }) { user { id username } accessToken } }"
+  "query": "mutation { register(input: { username: \"reza\", email: \"reza@test.com\", password: \"Str0ng!Pass\", fullName: \"Reza Test\" }) { user { id username } accessToken } }"
 }')
 TOKEN_B=$(echo "$REG_B" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['register']['accessToken'])")
 USER_B_ID=$(echo "$REG_B" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['register']['user']['id'])")
-echo "  ✓ user id: $USER_B_ID"
+echo "  user id: $USER_B_ID"
 
 # 3. User A follows user B
 echo ""
@@ -77,6 +78,6 @@ curl -s -X POST $API -H "Content-Type: application/json" -d '{
 echo ""
 echo "============================================================"
 echo "  All tests passed!"
-echo "  Frontend: http://localhost:3000"
-echo "  Backend:  http://localhost:4000/graphql"
+echo "  Backend: http://localhost:4000/graphql"
+echo "  Playground: http://localhost:4000/graphql (open in browser)"
 echo "============================================================"

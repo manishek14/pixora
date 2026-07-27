@@ -1,13 +1,16 @@
 # Lenz (لنز)
 
-A bilingual (Persian/English) Instagram-like social platform built with **NestJS**, **GraphQL**, **TypeORM**, **PostgreSQL** (SQLite for dev), and **Next.js 15**.
+A bilingual (Persian/English) Instagram-like social platform backend built with **NestJS**, **GraphQL**, **TypeORM**, and **PostgreSQL** (SQLite for dev).
 
 > **Name**: Lenz — کوتاه، قابل تلفظ در فارسی و انگلیسی، مرتبط با تصویر و عکاسی.
+
+> **Note**: The frontend was removed from this project. The repo now contains only the backend (NestJS + GraphQL). You can interact with the API via the GraphQL Playground at `http://localhost:4000/graphql`, Postman, or any GraphQL client.
 
 ## ✨ Features
 
 ### Phase 1 — Core Social (current)
-- ✅ **Auth**: Register, Login, JWT access + refresh tokens, Logout
+- ✅ **Auth**: Register, Login, JWT access + refresh tokens, Logout, refresh-token revocation (bcrypt-hash compare against DB)
+- ✅ **Strong password policy**: min 8 chars, requires lowercase + uppercase + digit + special char (enforced server-side via class-validator)
 - ✅ **Profile**: View profile by username, edit bio/website/avatar, public/private toggle
 - ✅ **Posts**: Create/list/delete with multi-image or single video, caption, hashtags (auto-extracted), mentions (auto-extracted), location, archive
 - ✅ **Likes**: Toggle like, like counts auto-maintained
@@ -17,8 +20,7 @@ A bilingual (Persian/English) Instagram-like social platform built with **NestJS
 - ✅ **Hashtags**: Search posts by hashtag, inline hashtag parsing in captions
 - ✅ **Search**: Search users by username/full name
 - ✅ **Uploads**: REST endpoint with Multer (single + multiple), served as static files
-- ✅ **i18n**: Persian (RTL) + English (LTR) with live switcher
-- ✅ **Responsive**: Sidebar on desktop, bottom nav on mobile
+- ✅ **Correct GraphQL types**: All pagination args use `Int` (not `Float`), so any standard GraphQL client works without surprises
 
 ### Phase 2 (planned)
 - 🔜 Stories (24h auto-expire via Cron), Highlights, Reactions
@@ -39,28 +41,24 @@ A bilingual (Persian/English) Instagram-like social platform built with **NestJS
 ```
 my-project/
 ├── apps/
-│   ├── backend/      NestJS + GraphQL + TypeORM
-│   │   └── src/
-│   │       ├── modules/
-│   │       │   ├── auth/        JWT + Passport
-│   │       │   ├── users/       Profile
-│   │       │   ├── posts/       Posts with hashtag extraction
-│   │       │   ├── likes/       Like toggle
-│   │       │   ├── comments/    Threaded comments
-│   │       │   ├── follows/     Follow + close friends
-│   │       │   ├── feed/        Personalized + explore feed
-│   │       │   └── uploads/     REST upload with Multer
-│   │       ├── common/          Decorators
-│   │       └── config/          Env validation (Joi)
-│   └── frontend/    Next.js 15 (App Router) + Apollo Client + Tailwind
+│   └── backend/                  NestJS + GraphQL + TypeORM
 │       └── src/
-│           ├── app/             Pages (login, register, feed, profile, post, ...)
-│           ├── components/      UI + layout + post
-│           ├── graphql/         Queries & mutations
-│           └── lib/             Apollo client, auth, i18n, utils
-├── docker-compose.yml           PostgreSQL + Redis + MinIO for prod
+│           ├── modules/
+│           │   ├── auth/         JWT + Passport (access + refresh, revocation)
+│           │   ├── users/        Profile
+│           │   ├── posts/        Posts with hashtag extraction
+│           │   ├── likes/        Like toggle
+│           │   ├── comments/     Threaded comments
+│           │   ├── follows/      Follow + close friends
+│           │   ├── feed/         Personalized + explore feed
+│           │   └── uploads/      REST upload with Multer
+│           ├── common/           Decorators (@Public, @CurrentUser)
+│           └── config/           Env validation (Joi)
+├── docker-compose.yml            PostgreSQL + Redis + MinIO for prod
 └── scripts/
-    └── smoke-test.sh            End-to-end test script
+    ├── start-backend.sh          Start dev backend
+    ├── smoke-test.sh             End-to-end API test
+    └── verify-fixes.sh           Verify Int-type + password-strength fixes
 ```
 
 ## 🚀 Quick start (dev with SQLite — no Docker needed)
@@ -75,15 +73,7 @@ npm run start:dev
 ```
 SQLite DB is auto-created at `./data/lenz.db`. Schema is synced automatically (synchronize=true in dev).
 
-### 2. Frontend
-```bash
-cd apps/frontend
-npm install
-npm run dev
-# → http://localhost:3000
-```
-
-### 3. Smoke test
+### 2. Smoke test
 ```bash
 bash scripts/smoke-test.sh
 ```
@@ -123,12 +113,6 @@ npm run start:prod
 | `UPLOAD_DIR` | `./uploads` | File upload directory |
 | `MAX_FILE_SIZE` | `50000000` | Max upload size (50MB) |
 
-## 🌐 Environment variables (frontend)
-
-| Variable | Default | Description |
-|---|---|---|
-| `NEXT_PUBLIC_GRAPHQL_URL` | `http://localhost:4000/graphql` | Backend GraphQL endpoint |
-
 ## 📋 GraphQL API overview
 
 ### Queries
@@ -136,13 +120,14 @@ npm run start:prod
 - `user(id)` / `userByUsername(username)` — fetch user
 - `searchUsers(q, limit)` — search
 - `postsByUser(userId)` / `post(id)` / `postsByHashtag(tag)` — fetch posts
-- `feed(limit, offset)` / `exploreFeed(limit, offset)` — feeds
+- `feed(limit, offset)` / `exploreFeed(limit, offset)` — feeds (limit/offset are `Int`)
 - `comments(postId)` — post comments with replies
 - `isLiked(postId)` / `isFollowing(userId)` — toggles
 - `followers(userId)` / `following(userId)` / `myCloseFriends()` — follow graph
 
 ### Mutations
 - `register(input)` / `login(input)` / `refresh(input)` / `logout` — auth
+  - `RegisterInput.password` enforces strong-password regex
 - `updateProfile(input)` / `updateAvatar(url)` — profile
 - `createPost(input)` / `updatePost(id, input)` / `deletePost(id)` / `toggleArchive(id, archive)` — posts
 - `toggleLike(postId)` — likes
@@ -162,9 +147,6 @@ npm run start:prod
 | ORM | TypeORM 0.3 (PostgreSQL 16 / SQLite) |
 | Auth | Passport-JWT, bcryptjs |
 | Validation | class-validator + Joi (env) |
-| Frontend | Next.js 15 (App Router), React 19, Apollo Client 3 |
-| Styling | Tailwind CSS 3 |
-| i18n | Custom React Context (fa/en) |
 | Realtime | Socket.io (planned for Phase 4) |
 
 ## 📝 License
