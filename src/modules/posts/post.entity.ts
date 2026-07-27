@@ -43,6 +43,27 @@ export class PostEntity {
   @Field()
   isReel: boolean;
 
+  // Reel-specific fields (only populated when isReel = true)
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  @Field({ nullable: true })
+  videoUrl?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Field({ nullable: true })
+  audioTrack?: string;
+
+  @Column({ type: 'int', nullable: true })
+  @Field(() => Int, { nullable: true })
+  durationSeconds?: number;
+
+  @Column({ default: 0 })
+  @Field(() => Int)
+  viewsCount: number;
+
+  @Column({ default: 0 })
+  @Field(() => Int)
+  sharesCount: number;
+
   @Column({ default: 0 })
   @Field(() => Int)
   likesCount: number;

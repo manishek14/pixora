@@ -19,6 +19,8 @@ import { StoryReactionEntity } from '@/modules/stories/entities/story-reaction.e
 import { StoryMediaType } from '@/modules/stories/entities/story.entity';
 import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity';
 import { HighlightItemEntity, HighlightMediaType } from '@/modules/highlights/entities/highlight-item.entity';
+import { ReelViewEntity } from '@/modules/reels/entities/reel-view.entity';
+import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
 import { JwtModule } from '@nestjs/jwt';
 import {
   BadRequestException,
@@ -64,6 +66,8 @@ describe('HighlightsService', () => {
             StoryReactionEntity,
             HighlightEntity,
             HighlightItemEntity,
+            ReelViewEntity,
+            BookmarkEntity,
           ],
           synchronize: true,
           logging: false,

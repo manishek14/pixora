@@ -10,6 +10,11 @@ type Post {
   mentions: [String!]!
   location: String
   isReel: Boolean!
+  videoUrl: String
+  audioTrack: String
+  durationSeconds: Int
+  viewsCount: Int!
+  sharesCount: Int!
   likesCount: Int!
   commentsCount: Int!
   archived: Boolean!
@@ -133,6 +138,35 @@ type UserStoriesGroup {
   hasUnviewed: Boolean!
 }
 
+type ReelView {
+  id: ID!
+  viewedAt: DateTime!
+  user: User!
+}
+
+type BookmarkListResult {
+  items: [Post!]!
+  hasMore: Boolean!
+}
+
+type ExplorePostsResult {
+  items: [Post!]!
+  hasMore: Boolean!
+}
+
+type HashtagTrend {
+  tag: String!
+  postsCount: Int!
+  reelsCount: Int!
+  total: Int!
+}
+
+type SuggestedUser {
+  user: User!
+  mutualFollowers: Int!
+  postsCount: Int!
+}
+
 type Query {
   """کاربر فعلی"""
   me: User!
@@ -201,6 +235,42 @@ type Query {
 
   """یک هایلایت بر اساس id"""
   highlight(id: ID!): Highlight
+
+  """فید ریلز ترند (مرتب بر اساس امتیاز تعامل + بازدید)"""
+  reelsFeed(limit: Int = 20, offset: Int = 0): [Post!]!
+
+  """دریافت یک ریل با شناسه"""
+  reel(id: ID!): Post!
+
+  """ریلزهای یک کاربر"""
+  userReels(userId: ID!, limit: Int = 20, offset: Int = 0): [Post!]!
+
+  """ریلزهای یک هشتگ"""
+  reelsByHashtag(tag: String!, limit: Int = 20, offset: Int = 0): [Post!]!
+
+  """لیست بینندگان ریل (فقط نویسنده)"""
+  reelViewers(reelId: ID!): [ReelView!]!
+
+  """پست‌های ذخیره‌شده توسط کاربر فعلی"""
+  myBookmarks(limit: Int = 20, offset: Int = 0): BookmarkListResult!
+
+  """آیا پست توسط کاربر فعلی ذخیره شده؟"""
+  isBookmarked(postId: ID!): Boolean!
+
+  """فید اکسپلور (پست و ریلز محبوب بر اساس امتیاز تعامل)"""
+  exploreTrending(limit: Int = 30, offset: Int = 0): ExplorePostsResult!
+
+  """ریلزهای ترند هفته اخیر"""
+  trendingReels(limit: Int = 20): [Post!]!
+
+  """پست‌های محبوب هفته اخیر"""
+  trendingPosts(limit: Int = 20): [Post!]!
+
+  """هشتگ‌های ترند هفته اخیر"""
+  trendingHashtags(limit: Int = 10): [HashtagTrend!]!
+
+  """پیشنهاد فالو بر اساس فالوورهای مشترک"""
+  suggestedUsers(limit: Int = 10): [SuggestedUser!]!
 }
 
 type Mutation {
@@ -288,6 +358,21 @@ type Mutation {
 
   """حذف هایلایت خودم"""
   deleteHighlight(id: ID!): Boolean!
+
+  """ساخت ریل جدید"""
+  createReel(input: CreateReelInput!): Post!
+
+  """ثبت بازدید ریل (ایدمپتنت — فقط اولین بازدید شمارش می‌شود)"""
+  viewReel(reelId: ID!): Post!
+
+  """ثبت اشتراک‌گذاری ریل"""
+  shareReel(reelId: ID!): Post!
+
+  """حذف ریل (فقط نویسنده)"""
+  deleteReel(id: ID!): Boolean!
+
+  """ذخیره/حذف پست (تاگل). برمی‌گرداند: true اگر ذخیره شد، false اگر حذف شد"""
+  toggleBookmark(postId: ID!): Boolean!
 }
 
 input RegisterInput {
@@ -359,4 +444,14 @@ input UpdateHighlightInput {
   title: String
   coverUrl: String
   items: [HighlightItemInput!]
+}
+
+input CreateReelInput {
+  videoUrl: String!
+  audioTrack: String
+  durationSeconds: Int
+  caption: String
+  hashtags: [String!]
+  mentions: [String!]
+  location: String
 }

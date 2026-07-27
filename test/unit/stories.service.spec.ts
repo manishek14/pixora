@@ -19,6 +19,8 @@ import { StoryViewEntity } from '@/modules/stories/entities/story-view.entity';
 import { StoryReactionEntity } from '@/modules/stories/entities/story-reaction.entity';
 import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity';
 import { HighlightItemEntity } from '@/modules/highlights/entities/highlight-item.entity';
+import { ReelViewEntity } from '@/modules/reels/entities/reel-view.entity';
+import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
 import {
   StoryMediaType,
   StoryVisibility,
@@ -70,6 +72,8 @@ describe('StoriesService', () => {
             StoryReactionEntity,
             HighlightEntity,
             HighlightItemEntity,
+            ReelViewEntity,
+            BookmarkEntity,
           ],
           synchronize: true,
           logging: false,

@@ -15,6 +15,7 @@ import { CommentEntity } from '../comments/comment.entity';
 import { FollowEntity } from '../follows/follow.entity';
 import { StoryEntity } from '../stories/entities/story.entity';
 import { HighlightEntity } from '../highlights/entities/highlight.entity';
+import { BookmarkEntity } from '../bookmarks/bookmark.entity';
 
 @Entity('users')
 @ObjectType('User')
@@ -94,4 +95,8 @@ export class UserEntity {
 
   @OneToMany(() => HighlightEntity, (highlight) => highlight.user)
   highlights: Relation<HighlightEntity>[];
+
+  // Phase 3 relations
+  @OneToMany(() => BookmarkEntity, (bookmark) => bookmark.user)
+  bookmarks: Relation<BookmarkEntity>[];
 }

@@ -404,3 +404,89 @@ Stage Summary:
 - Test totals: 55 unit (18 auth + 20 stories + 17 highlights) + 29 e2e (6 phase-1 + 23 phase-2) = 84 tests, all green
 - Backend still boots cleanly on http://localhost:4000/graphql and responds HTTP 200
 - Ready for Phase 3 (Reels + Bookmarks + Enhanced Explore)
+
+---
+Task ID: 20
+Agent: main
+Task: Phase 3 — Reels, Bookmarks, Enhanced Explore
+
+Work Log:
+- Extended PostEntity with reel-specific fields:
+  * videoUrl (varchar 512, nullable)
+  * audioTrack (varchar 255, nullable)
+  * durationSeconds (int, nullable, 1-600s validated)
+  * viewsCount (int, default 0)
+  * sharesCount (int, default 0)
+  * Kept existing likesCount/commentsCount/archived fields
+  * isReel boolean still discriminates reels from regular posts
+- Created ReelsViewEntity (new table `reel_views`):
+  * id (UUID), reelId (FK to posts), userId (FK to users, eager-loaded), viewedAt
+  * @Unique(['reelId', 'userId']) — idempotent: re-watching a reel does NOT insert a duplicate row, so viewsCount only increments on first view per user
+  * Indexed on reelId and userId for fast lookups
+- Created ReelsModule:
+  * CreateReelInput DTO: videoUrl (IsUrl, max 512), audioTrack (optional, max 255), durationSeconds (1-600), caption (max 2200), hashtags/mentions arrays, location (max 255)
+  * ReelsService:
+    - create(authorId, input): builds a Post with isReel=true + reel-specific fields, auto-extracts hashtags (#unicode-aware) and mentions (@username) from caption if not provided, reloads with author relation
+    - getFeed(viewerId, limit, offset): pulls last 200 candidate reels, scores in-memory by engagement * recency decay (likes + 2*comments + 0.1*views, half-life 24h), sorts desc
+    - getById(reelId): throws NotFound if missing OR archived (avoids leaking existence)
+    - getByUser(userId), getByHashtag(tag): straightforward list queries
+    - view(viewerId, reelId): idempotent — only FIRST view per user increments viewsCount; returns the reel with fresh viewsCount
+    - share(reelId): NOT idempotent — each share call increments sharesCount (matches Instagram behavior)
+    - delete(reelId, authorId): author-only
+    - getViewers(authorId, reelId): author-only viewer list with user relation
+    - increment/decrement Likes/Comments helpers (for cross-module use by Likes/Comments modules)
+  * ReelsResolver: 5 queries (reelsFeed, reel, userReels, reelsByHashtag, reelViewers) + 4 mutations (createReel, viewReel, shareReel, deleteReel), all use ID type for path args, all guarded with GqlAuthGuard except getById/getByUser/getByHashtag (public reads)
+- Created BookmarksModule:
+  * BookmarkEntity (new table `bookmarks`):
+    - id (UUID), userId (FK, eager-loaded User), postId (FK to Post), createdAt
+    - @Unique(['userId', 'postId']) — one bookmark per (user, post); toggle removes if exists
+  * BookmarkListResult ObjectType (items + hasMore) — needed to be a registered provider in the module so the GraphQL schema can resolve it
+  * BookmarksService:
+    - toggle(userId, postId): returns true if bookmark created, false if removed; checks post existence first (throws NotFound)
+    - isBookmarked(userId, postId)
+    - list(userId, limit, offset): returns user's bookmarked posts newest-first, EXCLUDES archived posts (so bookmarked-then-archived post disappears from list, but bookmark row remains so it can re-appear if un-archived)
+    - countByUser(userId)
+  * BookmarksResolver: 2 queries (myBookmarks, isBookmarked) + 1 mutation (toggleBookmark), all GqlAuthGuard-protected
+  * PostsModule imported so BookmarksService can call PostsService.findById for existence checks
+- Created ExploreModule:
+  * ExplorePostsResult, HashtagTrend, SuggestedUser ObjectTypes (all registered as providers in the module)
+  * ExploreService:
+    - getExploreFeed(limit, offset): pulls last 200 mixed posts + reels, scores by engagement * recency decay, returns top N
+    - getTrendingReels(limit): top reels in last 7 days by viewsCount DESC, then likesCount, then createdAt
+    - getTrendingPosts(limit): top non-reel posts in last 7 days by likesCount DESC
+    - getTrendingHashtags(limit): parses simple-array `hashtags` column from recent posts + reels, counts posts vs reels per hashtag, sorts by total count desc — case-insensitive
+    - getSuggestedUsers(userId, limit): excludes self + already-followed users, ranks by mutual-followers count desc, then postsCount desc — mutuals computed by intersecting candidate's followers with current user's followers
+  * ExploreResolver: 5 queries (exploreTrending, trendingReels, trendingPosts, trendingHashtags, suggestedUsers) — all public except suggestedUsers (GqlAuthGuard)
+- Extended UserEntity with bookmarks relation (OneToMany to BookmarkEntity) — needed so the inverse-side metadata is registered with TypeORM
+- Registered 3 new modules in AppModule: ReelsModule, BookmarksModule, ExploreModule
+- Updated all 3 existing test files (auth/stories/highlights unit specs) to register all 12 entities in their in-memory TypeORM config — otherwise TypeORM throws "Entity metadata for UserEntity#bookmarks was not found" because the new BookmarkEntity relation can't resolve its inverse side
+- Wrote 47 new unit tests across 3 files:
+  * test/unit/reels.service.spec.ts (21 tests): create (4), getById (3), view idempotency (3), share (1), delete (2), getFeed ranking (3), getByUser (1), getByHashtag (1), getViewers author-only (2), increment/decrement counters (2)
+  * test/unit/bookmarks.service.spec.ts (11 tests): toggle (4), isBookmarked (2), list newest-first / archived exclusion / pagination / empty (4), countByUser (1)
+  * test/unit/explore.service.spec.ts (15 tests): getExploreFeed ranking / archived exclusion / empty / pagination (4), getTrendingReels reels-only / 7-day window (2), getTrendingPosts non-reel only (1), getTrendingHashtags cross-post-reel count / sort order / limit / empty (4), getSuggestedUsers excludes-followed / mutual-rank / limit / empty (4)
+- Wrote 22 new e2e tests in test/e2e/phase3.e2e-spec.ts:
+  * Reels (11): create + fetch + idempotent view + share + feed returns only reels + user reels + hashtag match + cross-user delete forbidden + author delete succeeds + author-only viewers + non-author viewers forbidden
+  * Bookmarks (4): toggle on/off + list + empty for fresh user + unauthenticated forbidden
+  * Explore (6): exploreTrending mixed + trendingReels reels-only + trendingPosts non-reel only + trendingHashtags cross-count + suggestedUsers excludes self/followed + suggestedUsers auth-required
+  * Cross-module (1): a reel can be bookmarked just like a regular post (since reels are stored in the same PostEntity)
+- Fixed two issues found during e2e writing:
+  1. ReelsResolver + BookmarksResolver originally used bare `@Args('id')` (string) but the e2e tests use `ID!` GraphQL variables → mismatch caused "Variable of type ID! used in position expecting type String!" validation error. Fixed by adding `type: () => ID` to every path-arg `@Args` in both resolvers.
+  2. The follow mutation is named `followUser` (not `follow`) and uses `@Args('userId')` (string), so the e2e follow call had to use `$userId: String!` not `$userId: ID!` and the operation name `followUser`. Initially misremembered as `follow(followingId)` — corrected after seeing the validation error.
+- Verified end-to-end:
+  * npm run build → clean (no TS errors)
+  * node dist/main.js → backend boots on http://localhost:4000, GraphQL responds 200, register mutation returns a JWT
+  * npm test → 102/102 unit tests pass (5.6s) — 6 suites
+  * npm run test:e2e → 51/51 e2e tests pass (8.1s) — 3 suites
+  * Grand total: 153 tests, all green (84 from Phase 1+2 + 69 new in Phase 3)
+
+Stage Summary:
+- Phase 3 backend complete: Reels, Bookmarks, Enhanced Explore all wired and tested
+- 3 new modules (Reels, Bookmarks, Explore), 1 new entity (ReelViewEntity + BookmarkEntity), 1 extended entity (PostEntity with 5 reel-specific fields)
+- 14 new GraphQL operations: 9 queries (reelsFeed, reel, userReels, reelsByHashtag, reelViewers, myBookmarks, isBookmarked, exploreTrending, trendingReels, trendingPosts, trendingHashtags, suggestedUsers) + 7 mutations (createReel, viewReel, shareReel, deleteReel, toggleBookmark)
+- Reels = Posts with isReel=true; same Likes/Comments infrastructure works for both → no need for separate LikeEntity/CommentEntity for reels
+- Reel view tracking idempotent (one row per (reelId, userId)); share tracking NOT idempotent (each share click counts)
+- Explore trending: ranks by engagement * recency-decay (half-life 24h), so fresh + popular content surfaces; pulls last 200 candidates and ranks in-memory for MVP simplicity (no separate trending materialized view)
+- Suggested users ranked by mutual-followers count, falling back to postsCount — produces friend-of-friend recommendations
+- Bookmarks exclude archived posts from list (but row persists for un-archive recovery)
+- Backend still boots cleanly on http://localhost:4000/graphql
+- Ready for Phase 4 (Notifications / Direct Messages / Search) — or wrap-up + delivery

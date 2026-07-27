@@ -17,6 +17,9 @@ import { FeedModule } from './modules/feed/feed.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { HighlightsModule } from './modules/highlights/highlights.module';
+import { ReelsModule } from './modules/reels/reels.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
+import { ExploreModule } from './modules/explore/explore.module';
 
 @Module({
   imports: [
@@ -70,6 +73,9 @@ import { HighlightsModule } from './modules/highlights/highlights.module';
     UploadsModule,
     StoriesModule,
     HighlightsModule,
+    ReelsModule,
+    BookmarksModule,
+    ExploreModule,
   ],
 })
 export class AppModule {}
