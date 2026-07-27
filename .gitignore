@@ -1,2 +1,35 @@
-skills/
+# Dependencies
 node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test output
+coverage/
+test-uploads/
+
+# Local env (keep .env checked in for dev defaults, override with .env.local)
+.env.local
+.env.*.local
+
+# SQLite data (dev DB) — comment this line out if you want to commit a seed DB
+data/*.db
+data/*.db-journal
+
+# Uploaded media (dev)
+uploads/*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Skills system (internal)
+skills/
+tool-results/
