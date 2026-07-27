@@ -28,4 +28,11 @@ export const envValidation = Joi.object({
   // The backend currently accepts all origins (`origin: true` in main.ts), but
   // this is kept for production hardening.
   FRONTEND_URL: Joi.string().default('http://localhost:3000'),
+
+  // Realtime / Push notifications
+  // Generate VAPID keys by running: npx web-push generate-vapid-keys
+  VAPID_PUBLIC_KEY: Joi.string().allow('').default(''),
+  VAPID_PRIVATE_KEY: Joi.string().allow('').default(''),
+  VAPID_SUBJECT: Joi.string().default('mailto:dev@pixora.app'),
+  PUSH_ENABLED: Joi.string().valid('true', 'false').default('false'),
 });

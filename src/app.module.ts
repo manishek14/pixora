@@ -27,6 +27,8 @@ import { BlocksModule } from './modules/blocks/blocks.module';
 import { MutesModule } from './modules/mutes/mutes.module';
 import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { CollectionsModule } from './modules/collections/collections.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
+import { PushModule } from './modules/push/push.module';
 
 @Module({
   imports: [
@@ -90,6 +92,8 @@ import { CollectionsModule } from './modules/collections/collections.module';
     MutesModule,
     SuggestionsModule,
     CollectionsModule,
+    RealtimeModule,
+    PushModule,
   ],
 })
 export class AppModule {}

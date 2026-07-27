@@ -157,6 +157,36 @@ enum NotificationEntityType {
   Message
 }
 
+type Message {
+  id: ID!
+  threadId: ID!
+  text: String
+  mediaUrls: [String!]
+  isRead: Boolean!
+  createdAt: DateTime!
+  sender: User!
+}
+
+type MessageThread {
+  id: ID!
+  lastMessageAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  userA: User!
+  userB: User!
+  messages: [Message!]
+}
+
+type PushSubscription {
+  id: ID!
+  user: User!
+  endpoint: String!
+  p256dh: String!
+  auth: String!
+  expirationTime: Float
+  createdAt: DateTime!
+}
+
 type Block {
   id: ID!
   createdAt: DateTime!
@@ -170,6 +200,21 @@ type NotificationListResult {
   items: [Notification!]!
   hasMore: Boolean!
   unreadCount: Int!
+}
+
+type OnlineStatus {
+  userId: ID!
+  isOnline: Boolean!
+  lastSeenAt: Float!
+}
+
+type SubscribePushResult {
+  subscription: PushSubscription!
+  created: Boolean!
+}
+
+type UnsubscribePushResult {
+  removed: Int!
 }
 
 type Mute {
@@ -223,25 +268,6 @@ type SuggestedUser {
   user: User!
   mutualFollowers: Int!
   postsCount: Int!
-}
-
-type Message {
-  id: ID!
-  text: String
-  mediaUrls: [String!]
-  isRead: Boolean!
-  createdAt: DateTime!
-  sender: User!
-}
-
-type MessageThread {
-  id: ID!
-  lastMessageAt: DateTime
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  userA: User!
-  userB: User!
-  messages: [Message!]
 }
 
 type ThreadListResult {
@@ -334,6 +360,14 @@ type Query {
 
   """تعداد نوتیفیکیشن‌های خوانده‌نشده کاربر فعلی"""
   myUnreadNotificationsCount: Int!
+
+  """
+  وضعیت آنلاین/آفلاین یک یا چند کاربر — برای نمایش نقطه سبز کنار نام کاربر
+  """
+  onlineStatus(userIds: [ID!]!): [OnlineStatus!]!
+
+  """لیست دستگاه‌هایی که برای دریافت نوتیفیکیشن push ثبت شده‌اند"""
+  myPushSubscriptions: [PushSubscription!]!
 
   """فهرست کاربرانی که بلاک کرده‌اید (جدیدترین در ابتدا)"""
   myBlocks: [Block!]!
@@ -503,6 +537,15 @@ type Mutation {
   """حذف یک نوتیفیکیشن از لیست کاربر فعلی"""
   deleteNotification(id: ID!): Boolean!
 
+  """ثبت یک دستگاه برای دریافت نوتیفیکیشن push (Web Push API)"""
+  subscribeToPush(input: SubscribePushInput!): SubscribePushResult!
+
+  """حذف یک دستگاه از لیست push با endpoint"""
+  unsubscribeFromPush(endpoint: String!): UnsubscribePushResult!
+
+  """حذف همه دستگاه‌های کاربر فعلی از push (مثلاً برای خروج کامل)"""
+  unsubscribeAllPush: UnsubscribePushResult!
+
   """بلاک کردن یک کاربر (هر گونه فالو در هر دو جهت حذف می‌شود)"""
   blockUser(userId: ID!): Block!
 
@@ -646,6 +689,13 @@ input UpdatePostInput {
   hashtags: [String!]
   mentions: [String!]
   location: String
+}
+
+input SubscribePushInput {
+  endpoint: String!
+  p256dh: String!
+  auth: String!
+  expirationTime: Int
 }
 
 input CreateCommentInput {

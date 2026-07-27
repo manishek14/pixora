@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Optional,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, LessThan, Not } from 'typeorm';
@@ -12,6 +14,8 @@ import { UserEntity } from '../users/user.entity';
 import { SendMessageInput } from './dto/send-message.input';
 import { ThreadListResult } from './thread-list-result';
 import { BlocksService } from '../blocks/blocks.service';
+import { RealtimeEvents } from '../realtime/realtime.events';
+import { PushService } from '../push/push.service';
 
 @Injectable()
 export class MessagesService {
@@ -23,6 +27,12 @@ export class MessagesService {
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
     private readonly blocks: BlocksService,
+    @Optional()
+    @Inject(RealtimeEvents)
+    private readonly realtime: RealtimeEvents | null,
+    @Optional()
+    @Inject(PushService)
+    private readonly push: PushService | null,
   ) {}
 
   /**
@@ -72,10 +82,43 @@ export class MessagesService {
     thread.lastMessageAt = saved.createdAt;
     await this.threadRepo.save(thread);
 
-    return this.messageRepo.findOne({
+    const reloaded = (await this.messageRepo.findOne({
       where: { id: saved.id },
       relations: ['sender'],
-    }) as Promise<MessageEntity>;
+    })) as MessageEntity;
+
+    // Realtime: push the new message to the recipient's sockets (best-effort).
+    // The sender also gets the echo so multiple open tabs stay in sync.
+    if (this.realtime) {
+      this.realtime.emitToUser(input.recipientId, 'message_received', {
+        threadId: thread.id,
+        message: reloaded,
+      });
+      this.realtime.emitToUser(senderId, 'message_received', {
+        threadId: thread.id,
+        message: reloaded,
+      });
+    }
+
+    // Push: if the recipient has any registered push subscriptions, fire a
+    // Web Push notification (best-effort — failures are logged, not thrown).
+    if (this.push) {
+      const senderLabel = reloaded.sender?.username ?? 'someone';
+      const preview =
+        (reloaded.text ?? '').slice(0, 80) +
+        (reloaded.mediaUrls && reloaded.mediaUrls.length > 0 ? ' 📎' : '');
+      this.push
+        .sendPush(input.recipientId, {
+          title: `@${senderLabel}`, // e.g. "@sara"
+          body: preview || 'پیام جدید', // "new message" in Persian
+          url: `/direct/${thread.id}`,
+          tag: `dm:${thread.id}`,
+          data: { threadId: thread.id, messageId: reloaded.id },
+        })
+        .catch(() => void 0);
+    }
+
+    return reloaded;
   }
 
   /**
@@ -186,11 +229,33 @@ export class MessagesService {
       throw new ForbiddenException('not a participant in this thread');
     }
 
+    // Before updating, fetch the IDs of messages that will be flipped —
+    // we need them for the realtime event so the sender's UI can update
+    // checkmarks from ✓✓(sent) to ✓✓(read) (blue).
+    const unreadIncoming = await this.messageRepo.find({
+      where: { threadId, senderId: Not(userId), isRead: false },
+      select: ['id'],
+    });
+    const messageIds = unreadIncoming.map((m) => m.id);
+    if (messageIds.length === 0) return 0;
+
     const result = await this.messageRepo.update(
       { threadId, senderId: Not(userId), isRead: false },
       { isRead: true },
     );
-    return result.affected ?? 0;
+    const affected = result.affected ?? 0;
+
+    // Realtime: notify the OTHER participant that their messages were read.
+    if (this.realtime && affected > 0) {
+      const otherId = thread.userAId === userId ? thread.userBId : thread.userAId;
+      this.realtime.emitToUser(otherId, 'message_read', {
+        threadId,
+        readerId: userId,
+        messageIds,
+      });
+    }
+
+    return affected;
   }
 
   /**
@@ -226,7 +291,30 @@ export class MessagesService {
     if (message.senderId !== userId) {
       throw new ForbiddenException('can only delete your own messages');
     }
+    const threadId = message.threadId;
     await this.messageRepo.remove(message);
+
+    // Realtime: notify the OTHER participant that a message was deleted so
+    // they can remove it from their UI without a refetch.
+    if (this.realtime) {
+      const thread = await this.threadRepo.findOne({
+        where: { id: threadId },
+        select: ['id', 'userAId', 'userBId'],
+      });
+      if (thread) {
+        const otherId =
+          thread.userAId === userId ? thread.userBId : thread.userAId;
+        this.realtime.emitToUser(otherId, 'message_deleted', {
+          threadId,
+          messageId,
+        });
+        // Echo to the sender too (for multi-tab sync).
+        this.realtime.emitToUser(userId, 'message_deleted', {
+          threadId,
+          messageId,
+        });
+      }
+    }
     return true;
   }
 

@@ -38,7 +38,9 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   logger.log(`🚀 Pixora backend running on http://localhost:${port}`);
   logger.log(`📊 GraphQL Playground: http://localhost:${port}/graphql`);
+  logger.log(`🔌 Socket.io endpoint:  ws://localhost:${port}/ (JWT-auth)`);
   logger.log(`📁 Uploads served from: http://localhost:${port}/uploads`);
   logger.log(`📤 REST upload endpoints: POST /api/uploads/single | /api/uploads/multiple`);
+  logger.log(`🔔 Web Push: ${process.env.VAPID_PUBLIC_KEY ? 'configured' : 'NOT configured (run: npx web-push generate-vapid-keys)'}`);
 }
 bootstrap();

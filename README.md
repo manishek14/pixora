@@ -42,6 +42,14 @@ A bilingual (Persian/English) Instagram-like social platform built with **NestJS
 - ✅ Follow suggestions (mutual-friends-first algorithm)
 - ✅ Collections (organize saved/bookmarked posts into named folders)
 
+### Phase 6 — Realtime & Push
+- ✅ **Realtime messaging** (Socket.io): `message_received`, `message_read`, `message_deleted`, `typing` events
+- ✅ **Realtime notifications**: `notification_received` event for likes/comments/follows
+- ✅ **Online presence**: in-memory tracker, 30s grace period, broadcasts `presence_update` to mutual follows
+- ✅ **Web Push (RFC 8030)**: VAPID-authenticated push notifications for DMs + notifications
+- ✅ **Push subscription management**: GraphQL mutations for subscribe / unsubscribe / unsubscribeAll / list
+- ✅ **Frontend snippets**: ready-to-paste service worker + Socket.io client + push-subscribe helpers in `frontend-snippets/`
+
 ## 🏗️ Architecture
 
 ```
@@ -67,7 +75,9 @@ pixora/
 │   │   ├── blocks/              Block/unblock + filters
 │   │   ├── mutes/               Mute posts/stories
 │   │   ├── suggestions/         Follow suggestions
-│   │   └── collections/         Organize bookmarks into named folders
+│   │   ├── collections/         Organize bookmarks into named folders
+│   │   ├── realtime/            Socket.io gateway + presence + event bus
+│   │   └── push/                Web Push (VAPID) subscriptions + delivery
 │   ├── common/                  Decorators (@Public, @CurrentUser)
 │   ├── config/                  Env validation (Joi)
 │   ├── app.module.ts
@@ -79,6 +89,7 @@ pixora/
 │   └── jest-e2e.json
 ├── data/                        SQLite DB file (dev) — pixora.db
 ├── uploads/                     Uploaded media (dev)
+├── frontend-snippets/           Ready-to-paste client code (realtime + push)
 ├── docker-compose.yml           PostgreSQL + Redis + MinIO for prod
 └── README.md
 ```
@@ -139,6 +150,10 @@ npm run start:prod
 | `JWT_REFRESH_TTL` | `7d` | Refresh token lifetime |
 | `UPLOAD_DIR` | `./uploads` | File upload directory |
 | `MAX_FILE_SIZE` | `50000000` | Max upload size (50MB) |
+| `VAPID_PUBLIC_KEY` | (empty) | Web Push VAPID public key — generate with `node scripts/generate-vapid-keys.js` |
+| `VAPID_PRIVATE_KEY` | (empty) | Web Push VAPID private key |
+| `VAPID_SUBJECT` | `mailto:dev@pixora.app` | Web Push subject (RFC 8030) |
+| `PUSH_ENABLED` | `false` | Master switch for Web Push delivery (`true`/`false`) |
 
 ## 📋 GraphQL API overview
 
@@ -157,6 +172,8 @@ npm run start:prod
 - `myMutes` / `isMuted(userId)` — mute list
 - `suggestUsers(limit)` — follow suggestions
 - `myCollections` / `collection(id)` / `bookmarksByCollection(collectionId)` — collections
+- `myPushSubscriptions` — list push-subscribed devices
+- `onlineStatus(userIds)` — online/offline status for a batch of users
 
 ### Mutations
 - `register(input)` / `login(input)` / `refresh(input)` / `logout` — auth
@@ -173,6 +190,18 @@ npm run start:prod
 - `markNotificationRead` / `markAllNotificationsRead` / `deleteNotification` — notifications
 - `blockUser(userId)` / `unblockUser(userId)` — blocks
 - `muteUser(userId, mutePosts, muteStories)` / `unmuteUser(userId)` — mutes
+- `subscribeToPush(input)` / `unsubscribeFromPush(endpoint)` / `unsubscribeAllPush` — Web Push
+
+### Realtime (Socket.io)
+Connect to `ws://localhost:4000/` with JWT auth (via `auth.token` or `Authorization: Bearer` header).
+Server → client events:
+- `message_received` `{ threadId, message }`
+- `message_read` `{ threadId, readerId, messageIds }`
+- `message_deleted` `{ threadId, messageId }`
+- `notification_received` `{ notification }`
+- `typing` `{ threadId, userId, isTyping }`
+- `presence_update` `{ userId, isOnline, lastSeenAt }`
+Client → server events: `typing`, `joinThread`, `leaveThread`.
 
 ### REST endpoints
 - `POST /api/uploads/single` — single file upload (multipart `file`)

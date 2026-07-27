@@ -30,6 +30,7 @@ export class MessageEntity {
 
   @Column({ type: 'uuid' })
   @Index()
+  @Field(() => ID)
   threadId: string;
 
   @Column({ type: 'uuid' })

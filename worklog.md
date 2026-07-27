@@ -608,3 +608,78 @@ Stage Summary:
 - Total modules: 19 (Auth, Users, Posts, Likes, Comments, Follows, Feed, Uploads, Stories, Highlights, Reels, Bookmarks, Explore, Notifications, Messages, Search, Blocks, Mutes, Suggestions, Collections — feed module listed once but FeedService is its own).
 
 Next step: push to GitHub (https://github.com/manishek14/pixora).
+
+---
+Task ID: 6
+Agent: main
+Task: Phase 6 — Realtime Messaging (Socket.io) + Web Push Notifications
+
+Work Log:
+- Installed `web-push` (RFC 8030 Web Push library) and `socket.io-client` (for e2e tests)
+- Added VAPID env vars (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, PUSH_ENABLED) to env.validation.ts + .env
+- Wrote `scripts/generate-vapid-keys.js` — generates a fresh VAPID keypair and writes it to .env (PUSH_ENABLED=true)
+- Created RealtimeModule (`src/modules/realtime/`):
+  - `realtime.gateway.ts` — Socket.io gateway with JWT auth on handshake (via `auth.token` or `Authorization: Bearer` header). On connect: joins personal room `user:<userId>`, registers with PresenceService, broadcasts presence_update to mutual follows on first-socket. On disconnect: removes socket, schedules presence_update (offline) after 31s grace. Client→server events: `typing`, `joinThread`, `leaveThread` (all participant-verified).
+  - `presence.service.ts` — In-memory presence tracker. userId → Set<socketId>. 30s grace period before offline transition (cleared on reconnect). `getMutualFollowIds()` queries FollowEntity for bidirectional accepted follows. `getOnlineStatus(userIds)` for batched GraphQL queries.
+  - `realtime.events.ts` — Typed event bus. `emitToUser(userId, event, payload)` routes via `server.to('user:<id>').emit()`. `emitToThreadParticipants(threadId, event, payload, excludeUserId?)` looks up thread and emits to both participants. `emitToFriends(userId, ...)` uses PresenceService.getMutualFollowIds. No-op when no server attached (for unit tests).
+  - `presence.resolver.ts` — GraphQL query `onlineStatus(userIds: [ID!]!): [OnlineStatus!]!` (auth-guarded).
+  - `dto/typing.input.ts` — TypingInput { threadId: ID, isTyping?: boolean = true }
+  - `dto/online-status.ts` — OnlineStatus ObjectType { userId, isOnline, lastSeenAt }
+- Created PushModule (`src/modules/push/`):
+  - `push-subscription.entity.ts` — PushSubscriptionEntity (id, userId+user eager, endpoint, p256dh, auth, expirationTime, createdAt). Unique (userId, endpoint) so re-subscribing updates keys instead of duplicating.
+  - `push.service.ts` — Web Push wrapper. `onModuleInit` configures VAPID; degrades gracefully if keys missing (logs warning, sendPush returns 0). `subscribe()` is idempotent. `sendPush()` iterates all subscriptions for a user, calls `webpush.sendNotification`, prunes 404/410 subscriptions (per RFC 8030), logs other errors. Best-effort — never throws to caller.
+  - `push.resolver.ts` — GraphQL: `myPushSubscriptions` query + `subscribeToPush` / `unsubscribeFromPush` / `unsubscribeAllPush` mutations (all auth-guarded).
+  - `dto/subscribe-push.input.ts` — SubscribePushInput { endpoint, p256dh, auth, expirationTime? }
+  - `dto/push-results.ts` — SubscribePushResult { subscription, created } + UnsubscribePushResult { removed }
+- Wired RealtimeModule into MessagesService (constructor injection via `@Optional() @Inject(RealtimeEvents)` — the `@Inject` is necessary because TypeScript union types (`RealtimeEvents | null`) lose reflection metadata):
+  - `send()` emits `message_received` to BOTH recipient AND sender (for multi-tab sync) + fires Web Push to recipient with `@<sender>` title and message preview
+  - `markThreadRead()` fetches the IDs of messages being flipped BEFORE the update (so we can pass them in the realtime event), then emits `message_read { threadId, readerId, messageIds }` to the OTHER participant
+  - `deleteMessage()` emits `message_deleted { threadId, messageId }` to both participants
+- Wired RealtimeModule + PushModule into NotificationsService:
+  - `create()` reloads the saved notification with relations (actor, recipient) — `save()` returns the row without eager relations but the realtime event payload needs actor.username for the client to render "@bob liked your post". Then emits `notification_received { notification }` to recipient's sockets + fires Web Push with a localized Persian payload (e.g. "@bob پست شما را پسندید").
+- Created `frontend-snippets/` directory (NO Next.js install — just ready-to-paste code):
+  - `realtime-client.ts` — Drop-in `PixoraRealtime` class. Connects with JWT auth, exposes typed event subscriptions (`onMessageReceived`, `onMessageRead`, `onMessageDeleted`, `onNotificationReceived`, `onTyping`, `onPresenceUpdate`), and client→server emitters (`emitTyping`, `joinThread`, `leaveThread`). Auto-reconnects with exponential backoff (socket.io default).
+  - `sw-push.js` — Service worker that listens for `push` events, displays system notifications, and handles notification clicks (focuses existing app window and navigates to the deep-link URL via postMessage).
+  - `push-subscribe.ts` — Helper functions: `subscribeToPixoraPush(vapidPublicKey, accessToken)` (asks permission, registers SW, subscribes via PushManager, POSTs to GraphQL `subscribeToPush` mutation), `unsubscribeFromPixoraPush(endpoint, accessToken)`, `unsubscribeAllPixoraPush(accessToken)`.
+  - `README.md` — Setup guide: install socket.io-client, generate VAPID keys, register SW, subscribe after login, connect realtime client after login. Includes full events reference + GraphQL queries/mutations.
+- Updated AppModule: added RealtimeModule + PushModule imports.
+- Updated main.ts boot log: added Socket.io endpoint + Web Push status lines.
+- Updated `.env` with all new env vars (VAPID_*, PUSH_ENABLED) + `scripts/generate-vapid-keys.js` to populate them.
+- Updated `package.json`: added `--forceExit` to `test:e2e` (realtime gateway leaves a 31s setTimeout that prevents Jest from exiting cleanly).
+- Added `@Field(() => ID)` to `MessageEntity.threadId` (was indexed but not GraphQL-exposed — clients need it to know which thread a realtime message belongs to).
+- Added `@Field(() => Number, { nullable: true })` to `PushSubscriptionEntity.expirationTime` (was bigint column with bare `@Field({ nullable: true })` — GraphQL couldn't infer the type, caused "Undefined type error" at schema build time).
+
+Tests:
+- 42 new unit tests across 3 files:
+  - `test/unit/presence.service.spec.ts` (15 tests): addSocket (3), removeSocket (3), grace period with fake timers (2), getOnlineUserIds (1), getMutualFollowIds (2), getOnlineStatus (2), reconnect-within-grace (1), unknown-user handling (1)
+  - `test/unit/push.service.spec.ts` (16 tests): subscribe (5), unsubscribe (3), unsubscribeAll (1), listForUser (2), sendPush (6 — including 410/404 pruning and 429 non-pruning), degraded mode (2)
+  - `test/unit/realtime.events.spec.ts` (11 tests): emitToUser (3), emitToThreadParticipants (3 — including exclude + unknown thread), emitToFriends (2), server lifecycle (2), isAttached (1)
+- 21 new e2e tests in `test/e2e/phase6.e2e-spec.ts`:
+  - Connection (3): valid JWT connects, missing token rejected, invalid token rejected (using a custom `expectSocketRejected` helper that handles socket.io's async connect-then-disconnect pattern)
+  - message_received (1): new DM delivered to recipient in real time
+  - message_read (1): sender notified when their messages are marked read (asserts >= 2 messageIds since previous tests may have left unread messages in the same thread)
+  - message_deleted (1): recipient notified when sender deletes a message
+  - notification_received (2): like + follow notifications delivered (uses lowercase enum values — `like` / `follow` — because socket events deliver raw DB values, not GraphQL-serialized PascalCase keys)
+  - typing (2): typing indicator relayed to other participant; non-participant typing refused (no event delivered)
+  - presence (2): presence_update broadcast to mutual follows on connect; onlineStatus GraphQL query returns correct shape
+  - Push GraphQL (7): subscribe (creates new), idempotent re-subscribe (created=false, keys updated), list, multi-user isolation (no cross-user leak), unsubscribe by endpoint, unsubscribeAll, unauthenticated rejected
+  - Push delivery (2): webpush.sendNotification called when DM sent to subscribed user (payload has `@<sender>` title + message preview); webpush.sendNotification called when like creates notification for subscribed user (payload has Persian body `پسندید`)
+- All e2e tests use mocked `web-push` (jest.mock at file top) so no real FCM/Mozilla calls are made.
+- The PushService is forced into "configured" mode in beforeAll (`(push as any).configured = true`) since the test env doesn't have VAPID env vars set.
+
+Issues found and fixed during testing:
+1. TypeScript union types (`RealtimeEvents | null`) break NestJS DI reflection — `@Optional()` alone made the dependency null even when PushModule was imported. Fixed by adding explicit `@Inject(RealtimeEvents)` / `@Inject(PushService)` decorators.
+2. `MessageEntity.threadId` wasn't exposed to GraphQL — e2e tests querying `sendMessage { threadId }` got "Cannot query field 'threadId'" validation error. Fixed by adding `@Field(() => ID)`.
+3. `PushSubscriptionEntity.expirationTime` (bigint column) caused "Undefined type error" at schema build time. Fixed by adding `@Field(() => Number, { nullable: true })`.
+4. Socket.io connection rejection is async — the server's `handleConnection` runs after the client's `connect` event fires, so `expect(...).rejects.toThrow()` doesn't work. Built a custom `expectSocketRejected` helper that waits for either `connect_error` or `disconnect` (within 500ms of connect).
+5. NotificationsService.create() was emitting the saved notification without relations — the realtime event payload's `actor` was undefined, causing "Cannot read properties of undefined (reading 'username')" in the e2e test. Fixed by reloading the notification via `findOne({ where: { id: saved.id } })` before emitting (eager relations load on find, not on save).
+6. Socket events deliver raw DB enum values (`like`, `follow`), not GraphQL-serialized PascalCase keys (`Like`, `Follow`). Fixed e2e assertions to expect lowercase.
+
+Stage Summary:
+- Phase 6 source complete: 2 new modules (Realtime, Push), 1 new entity (PushSubscriptionEntity), 4 new GraphQL operations (onlineStatus query + subscribeToPush/unsubscribeFromPush/unsubscribeAllPush mutations + myPushSubscriptions query), 6 new Socket.io events (3 server→client: message_received, message_read, message_deleted, notification_received, typing, presence_update; 3 client→server: typing, joinThread, leaveThread).
+- Total entities: 20 (added PushSubscriptionEntity to the 19 from Phase 5).
+- Total modules: 21 (added Realtime + Push to the 19 from Phase 5).
+- All tests pass: 277 unit (16 files) + 137 e2e (6 files) = 414 tests. Build is clean. Backend boots and serves GraphQL on :4000 with Socket.io on the same port and Web Push configured.
+- Frontend snippets ready (no Next.js install — just paste-in code): realtime-client.ts (PixoraRealtime class), sw-push.js (service worker), push-subscribe.ts (subscribe/unsubscribe helpers), README.md (setup guide).
+- Realtime architecture: in-memory presence (single-node). For multi-node scaling, replace PresenceService's Map with Redis and replace RealtimeEvents.emitToUser with Redis pub/sub — the API stays the same.
+- Web Push architecture: VAPID keys per environment (generate with `node scripts/generate-vapid-keys.js`). Push subscriptions stored per (user, endpoint). Failed subscriptions (410/404) auto-pruned. Best-effort delivery — never blocks the calling mutation.
