@@ -2,7 +2,7 @@
  * Global Jest setup — runs before every test file.
  *
  * Forces a clean, in-memory SQLite database for every test run so unit &
- * e2e tests never touch the developer's ./data/lenz.db file.
+ * e2e tests never touch the developer's ./data/pixora.db file.
  *
  * Tests should NOT spin up the real AppModule unless they explicitly override
  * these env vars. For module-level overrides, see test/e2e/app.e2e-spec.ts.

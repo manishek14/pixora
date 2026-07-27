@@ -17,6 +17,10 @@ import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity'
 import { HighlightItemEntity } from '@/modules/highlights/entities/highlight-item.entity';
 import { ReelViewEntity } from '@/modules/reels/entities/reel-view.entity';
 import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
+import { BlockEntity } from '@/modules/blocks/block.entity';
+import { MuteEntity } from '@/modules/mutes/mute.entity';
+import { CollectionEntity } from '@/modules/collections/collection.entity';
+import { CollectionItemEntity } from '@/modules/collections/collection-item.entity';
 import { MessageThreadEntity } from '@/modules/messages/entities/message-thread.entity';
 import { MessageEntity } from '@/modules/messages/entities/message.entity';
 import { NotificationType, NotificationEntityType } from '@/modules/notifications/entities/notification.entity';
@@ -60,6 +64,10 @@ describe('NotificationsService', () => {
             NotificationEntity,
             MessageThreadEntity,
             MessageEntity,
+            BlockEntity,
+            MuteEntity,
+            CollectionEntity,
+            CollectionItemEntity,
           ],
           synchronize: true,
           logging: false,
@@ -121,11 +129,11 @@ describe('NotificationsService', () => {
       const n = await service.create({
         recipientId: recipient.id,
         type: NotificationType.System,
-        text: 'Welcome to Lenz!',
+        text: 'Welcome to Pixora!',
       });
       expect(n).not.toBeNull();
       expect(n!.actorId).toBeNull();
-      expect(n!.text).toBe('Welcome to Lenz!');
+      expect(n!.text).toBe('Welcome to Pixora!');
     });
 
     it('is best-effort — text/entityType/entityId all optional', async () => {

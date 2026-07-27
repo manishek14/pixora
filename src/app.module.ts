@@ -23,6 +23,10 @@ import { ExploreModule } from './modules/explore/explore.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { SearchModule } from './modules/search/search.module';
+import { BlocksModule } from './modules/blocks/blocks.module';
+import { MutesModule } from './modules/mutes/mutes.module';
+import { SuggestionsModule } from './modules/suggestions/suggestions.module';
+import { CollectionsModule } from './modules/collections/collections.module';
 
 @Module({
   imports: [
@@ -42,8 +46,8 @@ import { SearchModule } from './modules/search/search.module';
         return {
           type,
           database: isPostgres
-            ? config.get<string>('DB_NAME', 'lenz')
-            : config.get<string>('DB_PATH', join(process.cwd(), 'data', 'lenz.db')),
+            ? config.get<string>('DB_NAME', 'pixora')
+            : config.get<string>('DB_PATH', join(process.cwd(), 'data', 'pixora.db')),
           host: config.get<string>('DB_HOST', 'localhost'),
           port: config.get<number>('DB_PORT', 5432),
           username: config.get<string>('DB_USER', 'postgres'),
@@ -82,6 +86,10 @@ import { SearchModule } from './modules/search/search.module';
     NotificationsModule,
     MessagesModule,
     SearchModule,
+    BlocksModule,
+    MutesModule,
+    SuggestionsModule,
+    CollectionsModule,
   ],
 })
 export class AppModule {}

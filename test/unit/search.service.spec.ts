@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SearchService } from '@/modules/search/search.service';
+import { BlocksService } from '@/modules/blocks/blocks.service';
 import { UserEntity } from '@/modules/users/user.entity';
 import { PostEntity } from '@/modules/posts/post.entity';
 import { FollowEntity } from '@/modules/follows/follow.entity';
@@ -16,6 +17,10 @@ import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity'
 import { HighlightItemEntity } from '@/modules/highlights/entities/highlight-item.entity';
 import { ReelViewEntity } from '@/modules/reels/entities/reel-view.entity';
 import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
+import { BlockEntity } from '@/modules/blocks/block.entity';
+import { MuteEntity } from '@/modules/mutes/mute.entity';
+import { CollectionEntity } from '@/modules/collections/collection.entity';
+import { CollectionItemEntity } from '@/modules/collections/collection-item.entity';
 import { NotificationEntity } from '@/modules/notifications/entities/notification.entity';
 import { MessageThreadEntity } from '@/modules/messages/entities/message-thread.entity';
 import { MessageEntity } from '@/modules/messages/entities/message.entity';
@@ -88,13 +93,17 @@ describe('SearchService', () => {
             NotificationEntity,
             MessageThreadEntity,
             MessageEntity,
+            BlockEntity,
+            MuteEntity,
+            CollectionEntity,
+            CollectionItemEntity,
           ],
           synchronize: true,
           logging: false,
         }),
-        TypeOrmModule.forFeature([UserEntity, PostEntity]),
+        TypeOrmModule.forFeature([UserEntity, PostEntity, BlockEntity]),
       ],
-      providers: [SearchService, PostsService],
+      providers: [SearchService, PostsService, BlocksService],
     }).compile();
 
     service = moduleRef.get(SearchService);

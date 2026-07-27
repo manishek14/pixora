@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LikeEntity } from './like.entity';
@@ -8,6 +8,7 @@ import {
   NotificationType,
   NotificationEntityType,
 } from '../notifications/entities/notification.entity';
+import { BlocksService } from '../blocks/blocks.service';
 
 @Injectable()
 export class LikesService {
@@ -16,11 +17,17 @@ export class LikesService {
     private readonly likeRepo: Repository<LikeEntity>,
     private readonly postsService: PostsService,
     private readonly notifications: NotificationsService,
+    private readonly blocks: BlocksService,
   ) {}
 
   async toggle(userId: string, postId: string): Promise<boolean> {
     // Ensure post exists
     const post = await this.postsService.findById(postId);
+
+    // Block check: cannot like a post by someone you've blocked (or who has blocked you).
+    if (await this.blocks.isBlockedEitherWay(userId, post.authorId)) {
+      throw new ForbiddenException('cannot interact with this post');
+    }
 
     const existing = await this.likeRepo.findOne({ where: { userId, postId } });
     if (existing) {

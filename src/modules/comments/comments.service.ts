@@ -9,6 +9,7 @@ import {
   NotificationType,
   NotificationEntityType,
 } from '../notifications/entities/notification.entity';
+import { BlocksService } from '../blocks/blocks.service';
 
 @Injectable()
 export class CommentsService {
@@ -17,11 +18,17 @@ export class CommentsService {
     private readonly commentRepo: Repository<CommentEntity>,
     private readonly postsService: PostsService,
     private readonly notifications: NotificationsService,
+    private readonly blocks: BlocksService,
   ) {}
 
   async create(userId: string, input: CreateCommentInput): Promise<CommentEntity> {
     // Ensure post exists
     const post = await this.postsService.findById(input.postId);
+
+    // Block check: cannot comment on a post by someone you've blocked (or who has blocked you).
+    if (await this.blocks.isBlockedEitherWay(userId, post.authorId)) {
+      throw new ForbiddenException('cannot interact with this post');
+    }
 
     const comment = this.commentRepo.create({
       userId,

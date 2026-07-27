@@ -11,6 +11,7 @@ import { MessageEntity } from './entities/message.entity';
 import { UserEntity } from '../users/user.entity';
 import { SendMessageInput } from './dto/send-message.input';
 import { ThreadListResult } from './thread-list-result';
+import { BlocksService } from '../blocks/blocks.service';
 
 @Injectable()
 export class MessagesService {
@@ -21,6 +22,7 @@ export class MessagesService {
     private readonly messageRepo: Repository<MessageEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
+    private readonly blocks: BlocksService,
   ) {}
 
   /**
@@ -45,6 +47,11 @@ export class MessagesService {
       where: { id: input.recipientId },
     });
     if (!recipient) throw new NotFoundException('recipient not found');
+
+    // Block check: refuse if either party has blocked the other.
+    if (await this.blocks.isBlockedEitherWay(senderId, input.recipientId)) {
+      throw new ForbiddenException('cannot send a message to this user');
+    }
 
     const thread = await this.getOrCreateThread(senderId, input.recipientId);
 

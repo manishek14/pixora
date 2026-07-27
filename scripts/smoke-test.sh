@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# End-to-end smoke test for Lenz backend (GraphQL API on :4000).
+# End-to-end smoke test for Pixora backend (GraphQL API on :4000).
 # Note: passwords must meet the strong-password policy
 # (>=8 chars, lowercase, uppercase, digit, special char).
 set -euo pipefail
@@ -7,7 +7,7 @@ set -euo pipefail
 API="http://localhost:4000/graphql"
 
 echo "============================================================"
-echo "  Lenz Backend E2E Smoke Test"
+echo "  Pixora Backend E2E Smoke Test"
 echo "============================================================"
 
 # 1. Register user A
@@ -42,7 +42,7 @@ curl -s -X POST $API -H "Content-Type: application/json" -H "Authorization: Bear
 echo ""
 echo "[4/8] Reza creates a post"
 POST_RES=$(curl -s -X POST $API -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN_B" -d '{
-  "query": "mutation { createPost(input: { caption: \"Hello Lenz! #first #hello @sara\", mediaUrls: [\"/uploads/test1.jpg\"] }) { id caption hashtags mentions likesCount author { username } } }"
+  "query": "mutation { createPost(input: { caption: \"Hello Pixora! #first #hello @sara\", mediaUrls: [\"/uploads/test1.jpg\"] }) { id caption hashtags mentions likesCount author { username } } }"
 }')
 POST_ID=$(echo "$POST_RES" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['createPost']['id'])")
 echo "$POST_RES" | python3 -m json.tool

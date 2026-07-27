@@ -36,7 +36,7 @@ async function bootstrap() {
   await app.listen(port);
 
   const logger = new Logger('Bootstrap');
-  logger.log(`🚀 Lenz backend running on http://localhost:${port}`);
+  logger.log(`🚀 Pixora backend running on http://localhost:${port}`);
   logger.log(`📊 GraphQL Playground: http://localhost:${port}/graphql`);
   logger.log(`📁 Uploads served from: http://localhost:${port}/uploads`);
   logger.log(`📤 REST upload endpoints: POST /api/uploads/single | /api/uploads/multiple`);

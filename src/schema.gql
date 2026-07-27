@@ -157,10 +157,30 @@ enum NotificationEntityType {
   Message
 }
 
+type Block {
+  id: ID!
+  createdAt: DateTime!
+  blocker: User!
+  blockerId: ID!
+  blocked: User!
+  blockedId: ID!
+}
+
 type NotificationListResult {
   items: [Notification!]!
   hasMore: Boolean!
   unreadCount: Int!
+}
+
+type Mute {
+  id: ID!
+  createdAt: DateTime!
+  muter: User!
+  muterId: ID!
+  muted: User!
+  mutedId: ID!
+  mutePosts: Boolean!
+  muteStories: Boolean!
 }
 
 type FeedResult {
@@ -244,6 +264,43 @@ type SearchResponse {
   hashtags: [HashtagSearchResult!]!
 }
 
+type SuggestionItem {
+  user: User!
+  mutualCount: Int!
+  reason: String!
+}
+
+type SuggestionListResult {
+  items: [SuggestionItem!]!
+  total: Int!
+}
+
+type CollectionItem {
+  id: ID!
+  createdAt: DateTime!
+  collection: Collection!
+  collectionId: ID!
+  post: Post!
+  postId: ID!
+}
+
+type Collection {
+  id: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  user: User!
+  userId: ID!
+  name: String!
+  description: String
+  coverPostId: ID
+  items: [CollectionItem!]
+}
+
+type CollectionListResult {
+  items: [Collection!]!
+  total: Int!
+}
+
 type Query {
   """کاربر فعلی"""
   me: User!
@@ -278,6 +335,12 @@ type Query {
   """تعداد نوتیفیکیشن‌های خوانده‌نشده کاربر فعلی"""
   myUnreadNotificationsCount: Int!
 
+  """فهرست کاربرانی که بلاک کرده‌اید (جدیدترین در ابتدا)"""
+  myBlocks: [Block!]!
+
+  """آیا کاربر فعلی، کاربر مشخص‌شده را بلاک کرده است؟"""
+  isBlocked(userId: ID!): Boolean!
+
   """کامنت‌های یک پست با پاسخ‌ها"""
   comments(postId: String!): [Comment!]!
 
@@ -298,6 +361,12 @@ type Query {
 
   """فید اکسپلور (پست‌های محبوب و جدید همه)"""
   exploreFeed(limit: Int = 30, offset: Int = 0): FeedResult!
+
+  """فهرست کاربرانی که میوت کرده‌اید (پست یا استوری)"""
+  myMutes: [Mute!]!
+
+  """آیا کاربر فعلی، کاربر مشخص‌شده را میوت کرده است؟"""
+  isMuted(userId: ID!): Boolean!
 
   """
   فید استوری: استوری‌های فعال خودم + کاربرانی که فالو می‌کنم، گروه‌بندی شده بر اساس نویسنده
@@ -378,6 +447,15 @@ type Query {
 
   """جستجوی یکپارچه — کاربران، پست‌ها، Reelها و هشتگ‌ها در یک درخواست"""
   searchAll(query: String!, limit: Int = 10): SearchResponse!
+
+  """پیشنهاد کاربران برای دنبال کردن (بر اساس دنبال‌کنندگان مشترک)"""
+  suggestUsers(limit: Int = 10): SuggestionListResult!
+
+  """فهرست مجموعه‌های ذخیره‌شده توسط کاربر فعلی (به ترتیب الفبا)"""
+  myCollections: CollectionListResult!
+
+  """مشاهده یک مجموعه با محتویات آن (فقط مالک)"""
+  collection(id: ID!): Collection!
 }
 
 type Mutation {
@@ -425,6 +503,12 @@ type Mutation {
   """حذف یک نوتیفیکیشن از لیست کاربر فعلی"""
   deleteNotification(id: ID!): Boolean!
 
+  """بلاک کردن یک کاربر (هر گونه فالو در هر دو جهت حذف می‌شود)"""
+  blockUser(userId: ID!): Block!
+
+  """رفع بلاک از یک کاربر"""
+  unblockUser(userId: ID!): Boolean!
+
   """ثبت کامنت یا پاسخ"""
   createComment(input: CreateCommentInput!): Comment!
 
@@ -445,6 +529,12 @@ type Mutation {
 
   """افزودن/حذف به کلوزفرندز"""
   toggleCloseFriend(userId: String!, isClose: Boolean!): Boolean!
+
+  """میوت کردن پست یا استوری یک کاربر (یا هر دو)"""
+  muteUser(userId: ID!, mutePosts: Boolean = true, muteStories: Boolean = true): Mute!
+
+  """رفع میوت از یک کاربر (هم پست و هم استوری)"""
+  unmuteUser(userId: ID!): Boolean!
 
   """ایجاد استوری جدید (انقضا: ۲۴ ساعت)"""
   createStory(input: CreateStoryInput!): Story!
@@ -502,6 +592,21 @@ type Mutation {
 
   """حذف یکی از پیام‌های خود کاربر (فقط فرستنده می‌تواند حذف کند)"""
   deleteMessage(id: ID!): Boolean!
+
+  """ایجاد مجموعه جدید برای سازمان‌دهی پست‌های ذخیره‌شده"""
+  createCollection(name: String!, description: String): Collection!
+
+  """به‌روزرسانی نام یا توضیحات یک مجموعه"""
+  updateCollection(id: ID!, name: String, description: String): Collection!
+
+  """حذف یک مجموعه (پست‌های داخل آن حذف نمی‌شوند)"""
+  deleteCollection(id: ID!): Boolean!
+
+  """افزودن یک پست به مجموعه (اگر قبلاً اضافه شده باشد، idempotent است)"""
+  addToCollection(collectionId: ID!, postId: ID!): CollectionItem!
+
+  """حذف یک پست از مجموعه"""
+  removeFromCollection(collectionId: ID!, postId: ID!): Boolean!
 }
 
 input RegisterInput {

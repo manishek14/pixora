@@ -154,7 +154,7 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         }`,
         {
           input: {
-            mediaUrl: 'https://cdn.lenz.app/public.jpg',
+            mediaUrl: 'https://cdn.pixora.app/public.jpg',
             mediaType: 'Image',
             caption: 'Public story',
             visibility: 'Public',
@@ -180,7 +180,7 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         }`,
         {
           input: {
-            mediaUrl: 'https://cdn.lenz.app/close.jpg',
+            mediaUrl: 'https://cdn.pixora.app/close.jpg',
             mediaType: 'Image',
             visibility: 'CloseFriends',
           },
@@ -318,7 +318,7 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         }`,
         {
           input: {
-            mediaUrl: 'https://cdn.lenz.app/temp.jpg',
+            mediaUrl: 'https://cdn.pixora.app/temp.jpg',
             mediaType: 'Image',
           },
         },
@@ -363,11 +363,11 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         {
           input: {
             title: 'My Trip',
-            coverUrl: 'https://cdn.lenz.app/cover.jpg',
+            coverUrl: 'https://cdn.pixora.app/cover.jpg',
             items: [
-              { mediaUrl: 'https://cdn.lenz.app/1.jpg', mediaType: 'Image', caption: 'Day 1' },
-              { mediaUrl: 'https://cdn.lenz.app/2.mp4', mediaType: 'Video' },
-              { mediaUrl: 'https://cdn.lenz.app/3.jpg', mediaType: 'Image', caption: 'Day 3' },
+              { mediaUrl: 'https://cdn.pixora.app/1.jpg', mediaType: 'Image', caption: 'Day 1' },
+              { mediaUrl: 'https://cdn.pixora.app/2.mp4', mediaType: 'Video' },
+              { mediaUrl: 'https://cdn.pixora.app/3.jpg', mediaType: 'Image', caption: 'Day 3' },
             ],
           },
         },
@@ -463,7 +463,7 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         }`,
         {
           input: {
-            mediaUrl: 'https://cdn.lenz.app/from-story-1.jpg',
+            mediaUrl: 'https://cdn.pixora.app/from-story-1.jpg',
             mediaType: 'Image',
             caption: 'Story caption 1',
           },
@@ -476,7 +476,7 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         }`,
         {
           input: {
-            mediaUrl: 'https://cdn.lenz.app/from-story-2.mp4',
+            mediaUrl: 'https://cdn.pixora.app/from-story-2.mp4',
             mediaType: 'Video',
           },
         },
@@ -500,11 +500,11 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
       expect(res.body.data.createHighlightFromStories.items).toHaveLength(2);
       // Order should match the input order ([s2, s1])
       expect(res.body.data.createHighlightFromStories.items[0].mediaUrl).toBe(
-        'https://cdn.lenz.app/from-story-2.mp4',
+        'https://cdn.pixora.app/from-story-2.mp4',
       );
       expect(res.body.data.createHighlightFromStories.items[0].mediaType).toBe('Video');
       expect(res.body.data.createHighlightFromStories.items[1].mediaUrl).toBe(
-        'https://cdn.lenz.app/from-story-1.jpg',
+        'https://cdn.pixora.app/from-story-1.jpg',
       );
       expect(res.body.data.createHighlightFromStories.items[1].caption).toBe(
         'Story caption 1',
@@ -518,7 +518,7 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         }`,
         {
           input: {
-            mediaUrl: 'https://cdn.lenz.app/bob-story.jpg',
+            mediaUrl: 'https://cdn.pixora.app/bob-story.jpg',
             mediaType: 'Image',
           },
         },
@@ -544,7 +544,7 @@ describe('Phase 2 E2E — Stories + Highlights', () => {
         {
           input: {
             title: 'To Delete',
-            items: [{ mediaUrl: 'https://cdn.lenz.app/x.jpg', mediaType: 'Image' }],
+            items: [{ mediaUrl: 'https://cdn.pixora.app/x.jpg', mediaType: 'Image' }],
           },
         },
         aliceToken,

@@ -21,10 +21,15 @@ import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity'
 import { HighlightItemEntity, HighlightMediaType } from '@/modules/highlights/entities/highlight-item.entity';
 import { ReelViewEntity } from '@/modules/reels/entities/reel-view.entity';
 import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
+import { BlockEntity } from '@/modules/blocks/block.entity';
+import { MuteEntity } from '@/modules/mutes/mute.entity';
+import { CollectionEntity } from '@/modules/collections/collection.entity';
+import { CollectionItemEntity } from '@/modules/collections/collection-item.entity';
 import { NotificationEntity } from '@/modules/notifications/entities/notification.entity';
 import { MessageThreadEntity } from '@/modules/messages/entities/message-thread.entity';
 import { MessageEntity } from '@/modules/messages/entities/message.entity';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { BlocksService } from '@/modules/blocks/blocks.service';
 import { JwtModule } from '@nestjs/jwt';
 import {
   BadRequestException,
@@ -75,6 +80,10 @@ describe('HighlightsService', () => {
             NotificationEntity,
             MessageThreadEntity,
             MessageEntity,
+            BlockEntity,
+            MuteEntity,
+            CollectionEntity,
+            CollectionItemEntity,
           ],
           synchronize: true,
           logging: false,
@@ -91,10 +100,11 @@ describe('HighlightsService', () => {
           LikeEntity,
           CommentEntity,
           NotificationEntity,
+          BlockEntity,
         ]),
         JwtModule.register({ secret: 'test-secret', signOptions: { expiresIn: '15m' } }),
       ],
-      providers: [HighlightsService, StoriesService, AuthService, FollowsService, NotificationsService],
+      providers: [HighlightsService, StoriesService, AuthService, FollowsService, NotificationsService, BlocksService],
     }).compile();
 
     service = moduleRef.get(HighlightsService);
@@ -122,16 +132,16 @@ describe('HighlightsService', () => {
     it('creates a highlight with multiple items in order', async () => {
       const hl = await service.create(alice.id, {
         title: 'Travel',
-        coverUrl: 'https://cdn.lenz.app/cover.jpg',
+        coverUrl: 'https://cdn.pixora.app/cover.jpg',
         items: [
-          { mediaUrl: 'https://cdn.lenz.app/1.jpg', mediaType: HighlightMediaType.Image, caption: 'Day 1' },
-          { mediaUrl: 'https://cdn.lenz.app/2.mp4', mediaType: HighlightMediaType.Video },
-          { mediaUrl: 'https://cdn.lenz.app/3.jpg', mediaType: HighlightMediaType.Image, caption: 'Day 3' },
+          { mediaUrl: 'https://cdn.pixora.app/1.jpg', mediaType: HighlightMediaType.Image, caption: 'Day 1' },
+          { mediaUrl: 'https://cdn.pixora.app/2.mp4', mediaType: HighlightMediaType.Video },
+          { mediaUrl: 'https://cdn.pixora.app/3.jpg', mediaType: HighlightMediaType.Image, caption: 'Day 3' },
         ],
       });
 
       expect(hl.title).toBe('Travel');
-      expect(hl.coverUrl).toBe('https://cdn.lenz.app/cover.jpg');
+      expect(hl.coverUrl).toBe('https://cdn.pixora.app/cover.jpg');
       expect(hl.userId).toBe(alice.id);
       expect(hl.items).toHaveLength(3);
       // Items should be eagerly loaded and ordered by `order`
@@ -156,20 +166,20 @@ describe('HighlightsService', () => {
       const hl = await service.create(alice.id, {
         title: 'Old',
         items: [
-          { mediaUrl: 'https://cdn.lenz.app/a.jpg', mediaType: HighlightMediaType.Image },
+          { mediaUrl: 'https://cdn.pixora.app/a.jpg', mediaType: HighlightMediaType.Image },
         ],
       });
       const updated = await service.update(alice.id, hl.id, { title: 'New' });
       expect(updated.title).toBe('New');
       expect(updated.items).toHaveLength(1);
-      expect(updated.items[0].mediaUrl).toBe('https://cdn.lenz.app/a.jpg');
+      expect(updated.items[0].mediaUrl).toBe('https://cdn.pixora.app/a.jpg');
     });
 
     it('replaces items when items array provided', async () => {
       const hl = await service.create(alice.id, {
         title: 'Replacements',
         items: [
-          { mediaUrl: 'https://cdn.lenz.app/old.jpg', mediaType: HighlightMediaType.Image },
+          { mediaUrl: 'https://cdn.pixora.app/old.jpg', mediaType: HighlightMediaType.Image },
         ],
       });
       const before = await itemRepo.count({ where: { highlightId: hl.id } });
@@ -177,8 +187,8 @@ describe('HighlightsService', () => {
 
       const updated = await service.update(alice.id, hl.id, {
         items: [
-          { mediaUrl: 'https://cdn.lenz.app/new1.jpg', mediaType: HighlightMediaType.Image },
-          { mediaUrl: 'https://cdn.lenz.app/new2.jpg', mediaType: HighlightMediaType.Image },
+          { mediaUrl: 'https://cdn.pixora.app/new1.jpg', mediaType: HighlightMediaType.Image },
+          { mediaUrl: 'https://cdn.pixora.app/new2.jpg', mediaType: HighlightMediaType.Image },
         ],
       });
 
@@ -187,7 +197,7 @@ describe('HighlightsService', () => {
       expect(after).toBe(2);
       // Old item gone
       const stillOld = await itemRepo.findOne({
-        where: { highlightId: hl.id, mediaUrl: 'https://cdn.lenz.app/old.jpg' },
+        where: { highlightId: hl.id, mediaUrl: 'https://cdn.pixora.app/old.jpg' },
       });
       expect(stillOld).toBeNull();
     });
@@ -195,7 +205,7 @@ describe('HighlightsService', () => {
     it('forbids non-owner from updating', async () => {
       const hl = await service.create(alice.id, {
         title: 'Alice Only',
-        items: [{ mediaUrl: 'https://cdn.lenz.app/x.jpg', mediaType: HighlightMediaType.Image }],
+        items: [{ mediaUrl: 'https://cdn.pixora.app/x.jpg', mediaType: HighlightMediaType.Image }],
       });
       await expect(
         service.update(bob.id, hl.id, { title: 'Hacked' }),
@@ -213,7 +223,7 @@ describe('HighlightsService', () => {
     it('allows owner to delete their highlight', async () => {
       const hl = await service.create(alice.id, {
         title: 'To Delete',
-        items: [{ mediaUrl: 'https://cdn.lenz.app/x.jpg', mediaType: HighlightMediaType.Image }],
+        items: [{ mediaUrl: 'https://cdn.pixora.app/x.jpg', mediaType: HighlightMediaType.Image }],
       });
       const ok = await service.delete(alice.id, hl.id);
       expect(ok).toBe(true);
@@ -223,7 +233,7 @@ describe('HighlightsService', () => {
     it('forbids non-owner from deleting', async () => {
       const hl = await service.create(alice.id, {
         title: 'Alice Only',
-        items: [{ mediaUrl: 'https://cdn.lenz.app/x.jpg', mediaType: HighlightMediaType.Image }],
+        items: [{ mediaUrl: 'https://cdn.pixora.app/x.jpg', mediaType: HighlightMediaType.Image }],
       });
       await expect(service.delete(bob.id, hl.id)).rejects.toBeInstanceOf(ForbiddenException);
     });
@@ -232,9 +242,9 @@ describe('HighlightsService', () => {
       const hl = await service.create(alice.id, {
         title: 'Cascade Test',
         items: [
-          { mediaUrl: 'https://cdn.lenz.app/a.jpg', mediaType: HighlightMediaType.Image },
-          { mediaUrl: 'https://cdn.lenz.app/b.jpg', mediaType: HighlightMediaType.Image },
-          { mediaUrl: 'https://cdn.lenz.app/c.jpg', mediaType: HighlightMediaType.Image },
+          { mediaUrl: 'https://cdn.pixora.app/a.jpg', mediaType: HighlightMediaType.Image },
+          { mediaUrl: 'https://cdn.pixora.app/b.jpg', mediaType: HighlightMediaType.Image },
+          { mediaUrl: 'https://cdn.pixora.app/c.jpg', mediaType: HighlightMediaType.Image },
         ],
       });
       const itemId = hl.items[0].id;
@@ -247,12 +257,12 @@ describe('HighlightsService', () => {
   describe('createFromStories', () => {
     it('builds a highlight by copying media from existing stories', async () => {
       const story1 = await stories.create(alice.id, {
-        mediaUrl: 'https://cdn.lenz.app/s1.jpg',
+        mediaUrl: 'https://cdn.pixora.app/s1.jpg',
         mediaType: StoryMediaType.Image,
         caption: 'Story 1 caption',
       });
       const story2 = await stories.create(alice.id, {
-        mediaUrl: 'https://cdn.lenz.app/s2.mp4',
+        mediaUrl: 'https://cdn.pixora.app/s2.mp4',
         mediaType: StoryMediaType.Video,
       });
 
@@ -264,9 +274,9 @@ describe('HighlightsService', () => {
 
       expect(hl.items).toHaveLength(2);
       // First item should be story2 (we passed [s2, s1])
-      expect(hl.items[0].mediaUrl).toBe('https://cdn.lenz.app/s2.mp4');
+      expect(hl.items[0].mediaUrl).toBe('https://cdn.pixora.app/s2.mp4');
       expect(hl.items[0].mediaType).toBe(HighlightMediaType.Video);
-      expect(hl.items[1].mediaUrl).toBe('https://cdn.lenz.app/s1.jpg');
+      expect(hl.items[1].mediaUrl).toBe('https://cdn.pixora.app/s1.jpg');
       expect(hl.items[1].mediaType).toBe(HighlightMediaType.Image);
       expect(hl.items[1].caption).toBe('Story 1 caption');
     });
@@ -285,7 +295,7 @@ describe('HighlightsService', () => {
 
     it('throws NotFound when a story belongs to another user', async () => {
       const bobStory = await stories.create(bob.id, {
-        mediaUrl: 'https://cdn.lenz.app/bob.jpg',
+        mediaUrl: 'https://cdn.pixora.app/bob.jpg',
         mediaType: StoryMediaType.Image,
       });
       await expect(
@@ -295,7 +305,7 @@ describe('HighlightsService', () => {
 
     it('highlight survives after the source story is deleted', async () => {
       const story = await stories.create(alice.id, {
-        mediaUrl: 'https://cdn.lenz.app/temp.jpg',
+        mediaUrl: 'https://cdn.pixora.app/temp.jpg',
         mediaType: StoryMediaType.Image,
       });
       const hl = await service.createFromStories(alice.id, 'Survivor', [story.id]);
@@ -306,7 +316,7 @@ describe('HighlightsService', () => {
       // Highlight should still be there with its media
       const refetched = await service.getById(hl.id);
       expect(refetched.items).toHaveLength(1);
-      expect(refetched.items[0].mediaUrl).toBe('https://cdn.lenz.app/temp.jpg');
+      expect(refetched.items[0].mediaUrl).toBe('https://cdn.pixora.app/temp.jpg');
     });
   });
 
@@ -317,11 +327,11 @@ describe('HighlightsService', () => {
 
       const a = await service.create(alice.id, {
         title: 'First',
-        items: [{ mediaUrl: 'https://cdn.lenz.app/a.jpg', mediaType: HighlightMediaType.Image }],
+        items: [{ mediaUrl: 'https://cdn.pixora.app/a.jpg', mediaType: HighlightMediaType.Image }],
       });
       const b = await service.create(alice.id, {
         title: 'Second',
-        items: [{ mediaUrl: 'https://cdn.lenz.app/b.jpg', mediaType: HighlightMediaType.Image }],
+        items: [{ mediaUrl: 'https://cdn.pixora.app/b.jpg', mediaType: HighlightMediaType.Image }],
       });
 
       const list = await service.getByUser(alice.id);
@@ -335,7 +345,7 @@ describe('HighlightsService', () => {
     it('anyone can read a user\'s highlights (public)', async () => {
       const hl = await service.create(alice.id, {
         title: 'Public',
-        items: [{ mediaUrl: 'https://cdn.lenz.app/x.jpg', mediaType: HighlightMediaType.Image }],
+        items: [{ mediaUrl: 'https://cdn.pixora.app/x.jpg', mediaType: HighlightMediaType.Image }],
       });
       const fetched = await service.getById(hl.id);
       expect(fetched.id).toBe(hl.id);

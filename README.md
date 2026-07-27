@@ -1,16 +1,16 @@
-# Lenz (لنز)
+# Pixora (پیکسرا)
 
 A bilingual (Persian/English) Instagram-like social platform built with **NestJS**, **GraphQL**, **TypeORM**, and **PostgreSQL** (SQLite for dev).
 
-> **Name**: Lenz — کوتاه، قابل تلفظ در فارسی و انگلیسی، مرتبط با تصویر و عکاسی.
+> **Name**: Pixora — کوتاه، قابل تلفظ در فارسی و انگلیسی، ترکیبی از "Pixel" و "Aurora" (شفق)، الهام‌گرفته از نور و تصویر.
 
 > **Note**: Backend-only project. Interact with the API via the GraphQL Playground at `http://localhost:4000/graphql`, Postman, or any GraphQL client.
 
 ## ✨ Features
 
-### Phase 1 — Core Social (current)
+### Phase 1 — Core Social
 - ✅ **Auth**: Register, Login, JWT access + refresh tokens, Logout, refresh-token revocation (bcrypt-hash compare against DB)
-- ✅ **Strong password policy**: min 8 chars, requires lowercase + uppercase + digit + special char (enforced server-side via class-validator)
+- ✅ **Strong password policy**: min 8 chars, requires lowercase + uppercase + digit + special char
 - ✅ **Profile**: View profile by username, edit bio/website/avatar, public/private toggle
 - ✅ **Posts**: Create/list/delete with multi-image or single video, caption, hashtags (auto-extracted), mentions (auto-extracted), location, archive
 - ✅ **Likes**: Toggle like, like counts auto-maintained
@@ -20,64 +20,72 @@ A bilingual (Persian/English) Instagram-like social platform built with **NestJS
 - ✅ **Hashtags**: Search posts by hashtag, inline hashtag parsing in captions
 - ✅ **Search**: Search users by username/full name
 - ✅ **Uploads**: REST endpoint with Multer (single + multiple), served as static files
-- ✅ **Correct GraphQL types**: All pagination args use `Int` (not `Float`)
-- ✅ **Jest test suite**: Unit tests for AuthService + DTO validation, e2e tests for the GraphQL surface
 
-### Phase 2 (planned)
-- 🔜 Stories (24h auto-expire via Cron), Highlights, Reactions
-- 🔜 Close Friends story segmentation
+### Phase 2 — Stories
+- ✅ Stories (24h auto-expire via Cron), Highlights, Reactions
+- ✅ Close Friends story segmentation
+- ✅ Story views + reactions
 
-### Phase 3 (planned)
-- 🔜 Reels (dedicated tab + algorithm)
-- 🔜 Bookmarks (Saved posts)
-- 🔜 Enhanced Explore (with hashtag pages)
+### Phase 3 — Discovery
+- ✅ Reels (dedicated tab + algorithm)
+- ✅ Bookmarks (Saved posts)
+- ✅ Enhanced Explore (with hashtag pages)
 
-### Phase 4 (planned)
-- 🔜 Direct messages (Socket.io realtime)
-- 🔜 Online presence, typing indicator, seen receipts
-- 🔜 Voice + Video messages
+### Phase 4 — Communication
+- ✅ Direct messages (text + media, threads, unread counts, mark-read)
+- ✅ Notifications (likes, comments, follows, system)
+- ✅ Unified search (users, posts, reels, hashtags)
+
+### Phase 5 — Safety & Discovery
+- ✅ Block / Unblock users (filters Likes, Comments, Follows, Messages, Search)
+- ✅ Mute users (separately mutes posts, stories, or both; filters feed/stories)
+- ✅ Follow suggestions (mutual-friends-first algorithm)
+- ✅ Collections (organize saved/bookmarked posts into named folders)
 
 ## 🏗️ Architecture
 
 ```
-my-project/
-├── src/                       NestJS source root
+pixora/
+├── src/
 │   ├── modules/
-│   │   ├── auth/              JWT + Passport (access + refresh, revocation)
-│   │   ├── users/             Profile
-│   │   ├── posts/             Posts with hashtag extraction
-│   │   ├── likes/             Like toggle
-│   │   ├── comments/          Threaded comments
-│   │   ├── follows/           Follow + close friends
-│   │   ├── feed/              Personalized + explore feed
-│   │   └── uploads/           REST upload with Multer
-│   ├── common/                Decorators (@Public, @CurrentUser)
-│   ├── config/                Env validation (Joi)
+│   │   ├── auth/                JWT + Passport (access + refresh, revocation)
+│   │   ├── users/               Profile
+│   │   ├── posts/               Posts with hashtag extraction
+│   │   ├── likes/               Like toggle
+│   │   ├── comments/            Threaded comments
+│   │   ├── follows/             Follow + close friends
+│   │   ├── feed/                Personalized + explore feed
+│   │   ├── uploads/             REST upload with Multer
+│   │   ├── stories/             24h stories + reactions + highlights
+│   │   ├── highlights/          Story highlights
+│   │   ├── reels/               Reels + view tracking
+│   │   ├── bookmarks/           Saved posts
+│   │   ├── explore/             Hashtag pages + trending
+│   │   ├── notifications/       Like/comment/follow/system notifications
+│   │   ├── messages/            Direct messages (1-on-1 threads)
+│   │   ├── search/              Unified search (users/posts/reels/hashtags)
+│   │   ├── blocks/              Block/unblock + filters
+│   │   ├── mutes/               Mute posts/stories
+│   │   ├── suggestions/         Follow suggestions
+│   │   └── collections/         Organize bookmarks into named folders
+│   ├── common/                  Decorators (@Public, @CurrentUser)
+│   ├── config/                  Env validation (Joi)
 │   ├── app.module.ts
 │   └── main.ts
-├── test/                      Jest test suite
-│   ├── unit/                  *.spec.ts — isolated unit/integration tests
-│   ├── e2e/                   *.e2e-spec.ts — full AppModule + supertest
-│   ├── setup.ts               Global Jest env (in-memory SQLite, test JWT secrets)
-│   └── jest-e2e.json          Jest config for e2e tests
-├── data/                      SQLite DB file (dev)
-├── uploads/                   Uploaded media (dev)
-├── dist/                      Build output (gitignored)
-├── coverage/                  Test coverage (gitignored)
-├── docker-compose.yml         PostgreSQL + Redis + MinIO for prod
-├── nest-cli.json
-├── tsconfig.json              TypeScript config (src + test)
-├── tsconfig.build.json        TypeScript config for nest build (src only)
-├── jest.config.js             Jest config for unit tests
-├── package.json
-├── .env                       Default env (override with .env.local)
+├── test/
+│   ├── unit/                    *.spec.ts — isolated unit/integration tests
+│   ├── e2e/                     *.e2e-spec.ts — full AppModule + supertest
+│   ├── setup.ts                 Global Jest env (in-memory SQLite, test JWT secrets)
+│   └── jest-e2e.json
+├── data/                        SQLite DB file (dev) — pixora.db
+├── uploads/                     Uploaded media (dev)
+├── docker-compose.yml           PostgreSQL + Redis + MinIO for prod
 └── README.md
 ```
 
 ## 🚀 Quick start (dev with SQLite — no Docker needed)
 
 ```bash
-# Install deps + rebuild native bindings (better-sqlite3)
 npm install
 npm rebuild better-sqlite3
 
@@ -86,7 +94,7 @@ npm run start:dev
 # → http://localhost:4000/graphql (Playground)
 ```
 
-SQLite DB is auto-created at `./data/lenz.db`. Schema is synced automatically (synchronize=true in dev).
+SQLite DB is auto-created at `./data/pixora.db`. Schema is synced automatically (synchronize=true in dev).
 
 ## 🧪 Tests
 
@@ -96,11 +104,7 @@ npm run test:e2e      # e2e tests via supertest (test/e2e/*.e2e-spec.ts)
 npm run test:cov      # unit tests with coverage report → ./coverage
 ```
 
-The Jest suite runs against an in-memory SQLite DB (`DB_PATH=:memory:`, configured in `test/setup.ts`) — it never touches the developer's `./data/lenz.db`.
-
-### What's covered
-- **Unit** (`test/unit/auth.service.spec.ts`): `RegisterInput` validation (strong-password regex, email format, username charset), `AuthService.register/login/refresh/logout` with a real in-memory DB.
-- **E2E** (`test/e2e/app.e2e-spec.ts`): Full AppModule boot, GraphQL register/login/me/feed — proves the Int-pagination fix that previously caused `درخواست نامعتبر است` stays fixed.
+The Jest suite runs against an in-memory SQLite DB (`DB_PATH=:memory:`, configured in `test/setup.ts`) — it never touches the developer's `./data/pixora.db`.
 
 ## 🐳 Production setup (PostgreSQL + Redis)
 
@@ -112,7 +116,7 @@ cat > .env.local <<'EOF'
 DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=lenz
+DB_NAME=pixora
 DB_USER=postgres
 DB_PASS=postgres
 NODE_ENV=production
@@ -127,7 +131,7 @@ npm run start:prod
 |---|---|---|
 | `PORT` | 4000 | Backend port |
 | `DB_TYPE` | `better-sqlite3` | `sqlite` / `better-sqlite3` / `postgres` |
-| `DB_PATH` | `./data/lenz.db` | SQLite DB file path |
+| `DB_PATH` | `./data/pixora.db` | SQLite DB file path |
 | `DB_HOST/PORT/NAME/USER/PASS` | — | PostgreSQL connection |
 | `JWT_ACCESS_SECRET` | (change!) | Access token signing secret |
 | `JWT_REFRESH_SECRET` | (change!) | Refresh token signing secret |
@@ -141,21 +145,34 @@ npm run start:prod
 ### Queries
 - `me` — current user
 - `user(id)` / `userByUsername(username)` — fetch user
-- `searchUsers(q, limit)` — search
+- `searchUsers(q, limit)` / `searchPosts` / `searchReels` / `searchHashtags` / `searchAll` — search
 - `postsByUser(userId)` / `post(id)` / `postsByHashtag(tag)` — fetch posts
-- `feed(limit, offset)` / `exploreFeed(limit, offset)` — feeds (limit/offset are `Int`)
+- `feed(limit, offset)` / `exploreFeed(limit, offset)` — feeds
 - `comments(postId)` — post comments with replies
 - `isLiked(postId)` / `isFollowing(userId)` — toggles
-- `followers(userId)` / `following(userId)` / `myCloseFriends()` — follow graph
+- `followers(userId)` / `following(userId)` / `myCloseFriends()`
+- `myThreads` / `thread(id)` / `threadWithUser(userId)` / `unreadMessagesCount` — DM
+- `myNotifications` / `myUnreadNotificationsCount` — notifications
+- `myBlocks` / `isBlocked(userId)` — block list
+- `myMutes` / `isMuted(userId)` — mute list
+- `suggestUsers(limit)` — follow suggestions
+- `myCollections` / `collection(id)` / `bookmarksByCollection(collectionId)` — collections
 
 ### Mutations
 - `register(input)` / `login(input)` / `refresh(input)` / `logout` — auth
-  - `RegisterInput.password` enforces strong-password regex
 - `updateProfile(input)` / `updateAvatar(url)` — profile
-- `createPost(input)` / `updatePost(id, input)` / `deletePost(id)` / `toggleArchive(id, archive)` — posts
+- `createPost` / `updatePost` / `deletePost` / `toggleArchive` — posts
 - `toggleLike(postId)` — likes
-- `createComment(input)` / `updateComment(id, text)` / `deleteComment(id)` — comments
-- `followUser(userId)` / `unfollowUser(userId)` / `removeFollower(followerId)` / `toggleCloseFriend(userId, isClose)` — follows
+- `createComment` / `updateComment` / `deleteComment` — comments
+- `followUser` / `unfollowUser` / `removeFollower` / `toggleCloseFriend` — follows
+- `sendStory` / `viewStory` / `reactToStory` / `deleteStory` — stories
+- `createHighlight` / `updateHighlight` / `deleteHighlight` — highlights
+- `sendReel` / `viewReel` / `deleteReel` — reels
+- `toggleBookmark` / `createCollection` / `addToCollection` / `removeFromCollection` / `deleteCollection` — bookmarks/collections
+- `sendMessage` / `markThreadRead` / `deleteMessage` — DM
+- `markNotificationRead` / `markAllNotificationsRead` / `deleteNotification` — notifications
+- `blockUser(userId)` / `unblockUser(userId)` — blocks
+- `muteUser(userId, mutePosts, muteStories)` / `unmuteUser(userId)` — mutes
 
 ### REST endpoints
 - `POST /api/uploads/single` — single file upload (multipart `file`)
@@ -171,7 +188,7 @@ npm run start:prod
 | Auth | Passport-JWT, bcryptjs |
 | Validation | class-validator + Joi (env) |
 | Tests | Jest 30, ts-jest, supertest |
-| Realtime | Socket.io (planned for Phase 4) |
+| Realtime | Socket.io (planned) |
 
 ## 📝 License
 

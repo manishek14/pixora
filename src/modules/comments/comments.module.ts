@@ -6,6 +6,7 @@ import { CommentsResolver } from './comments.resolver';
 import { PostsModule } from '../posts/posts.module';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { BlocksModule } from '../blocks/blocks.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     PostsModule,
     AuthModule,
     NotificationsModule,
+    BlocksModule,
   ],
   providers: [CommentsService, CommentsResolver],
   exports: [CommentsService],

@@ -5,6 +5,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BookmarksService } from '@/modules/bookmarks/bookmarks.service';
 import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
+import { BlockEntity } from '@/modules/blocks/block.entity';
+import { MuteEntity } from '@/modules/mutes/mute.entity';
+import { CollectionEntity } from '@/modules/collections/collection.entity';
+import { CollectionItemEntity } from '@/modules/collections/collection-item.entity';
 import { PostsService } from '@/modules/posts/posts.service';
 import { PostEntity } from '@/modules/posts/post.entity';
 import { UserEntity } from '@/modules/users/user.entity';
@@ -63,6 +67,10 @@ describe('BookmarksService', () => {
             HighlightItemEntity,
             ReelViewEntity,
             BookmarkEntity,
+            BlockEntity,
+            MuteEntity,
+            CollectionEntity,
+            CollectionItemEntity,
           ],
           synchronize: true,
           logging: false,

@@ -16,6 +16,10 @@ import { StoryReactionEntity } from '@/modules/stories/entities/story-reaction.e
 import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity';
 import { HighlightItemEntity } from '@/modules/highlights/entities/highlight-item.entity';
 import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
+import { BlockEntity } from '@/modules/blocks/block.entity';
+import { MuteEntity } from '@/modules/mutes/mute.entity';
+import { CollectionEntity } from '@/modules/collections/collection.entity';
+import { CollectionItemEntity } from '@/modules/collections/collection-item.entity';
 import { CreateReelInput } from '@/modules/reels/dto/create-reel.input';
 import {
   NotFoundException,
@@ -58,6 +62,10 @@ describe('ReelsService', () => {
             HighlightItemEntity,
             ReelViewEntity,
             BookmarkEntity,
+            BlockEntity,
+            MuteEntity,
+            CollectionEntity,
+            CollectionItemEntity,
           ],
           synchronize: true,
           logging: false,

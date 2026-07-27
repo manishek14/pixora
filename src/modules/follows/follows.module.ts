@@ -6,12 +6,14 @@ import { FollowsService } from './follows.service';
 import { FollowsResolver } from './follows.resolver';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { BlocksModule } from '../blocks/blocks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([FollowEntity, UserEntity]),
     AuthModule,
     NotificationsModule,
+    BlocksModule,
   ],
   providers: [FollowsService, FollowsResolver],
   exports: [FollowsService],

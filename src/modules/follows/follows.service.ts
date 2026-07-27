@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FollowEntity } from './follow.entity';
@@ -8,6 +8,7 @@ import {
   NotificationType,
   NotificationEntityType,
 } from '../notifications/entities/notification.entity';
+import { BlocksService } from '../blocks/blocks.service';
 
 @Injectable()
 export class FollowsService {
@@ -17,6 +18,7 @@ export class FollowsService {
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
     private readonly notifications: NotificationsService,
+    private readonly blocks: BlocksService,
   ) {}
 
   async follow(followerId: string, followingId: string): Promise<FollowEntity> {
@@ -25,6 +27,11 @@ export class FollowsService {
     }
     const target = await this.userRepo.findOne({ where: { id: followingId } });
     if (!target) throw new NotFoundException('user not found');
+
+    // Block check: cannot follow someone who has blocked you, or whom you've blocked.
+    if (await this.blocks.isBlockedEitherWay(followerId, followingId)) {
+      throw new ForbiddenException('cannot follow this user');
+    }
 
     const existing = await this.followRepo.findOne({
       where: { followerId, followingId },
@@ -55,6 +62,19 @@ export class FollowsService {
   async unfollow(followerId: string, followingId: string): Promise<boolean> {
     const result = await this.followRepo.delete({ followerId, followingId });
     return (result.affected ?? 0) > 0;
+  }
+
+  /**
+   * Remove ALL follow edges between two users in either direction.
+   * Called by the Blocks service when a block is created, so neither party
+   * retains a follow relationship after a block.
+   */
+  async removeAllFollowsBetween(userAId: string, userBId: string): Promise<number> {
+    const result = await this.followRepo.delete([
+      { followerId: userAId, followingId: userBId },
+      { followerId: userBId, followingId: userAId },
+    ]);
+    return result.affected ?? 0;
   }
 
   async removeFollower(userId: string, followerId: string): Promise<boolean> {

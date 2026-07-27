@@ -3,48 +3,48 @@ version: '3.9'
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: lenz-postgres
+    container_name: pixora-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: lenz
+      POSTGRES_DB: pixora
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - '5432:5432'
     volumes:
-      - lenz-pg:/var/lib/postgresql/data
+      - pixora-pg:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d lenz']
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d pixora']
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: lenz-redis
+    container_name: pixora-redis
     restart: unless-stopped
     ports:
       - '6379:6379'
     volumes:
-      - lenz-redis:/data
+      - pixora-redis:/data
     command: ['redis-server', '--appendonly', 'yes']
 
   # MinIO (S3-compatible) for media storage in production
   minio:
     image: minio/minio:latest
-    container_name: lenz-minio
+    container_name: pixora-minio
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: lenz
-      MINIO_ROOT_PASSWORD: lenz-secret-change-me
+      MINIO_ROOT_USER: pixora
+      MINIO_ROOT_PASSWORD: pixora-secret-change-me
     ports:
       - '9000:9000'
       - '9001:9001'
     volumes:
-      - lenz-minio:/data
+      - pixora-minio:/data
     command: server /data --console-address ":9001"
 
 volumes:
-  lenz-pg:
-  lenz-redis:
-  lenz-minio:
+  pixora-pg:
+  pixora-redis:
+  pixora-minio:

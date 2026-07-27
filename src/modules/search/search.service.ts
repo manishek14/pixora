@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, In } from 'typeorm';
 import { UserEntity } from '../users/user.entity';
 import { PostEntity } from '../posts/post.entity';
 import { HashtagSearchResult, SearchResponse } from './search-types';
+import { BlocksService } from '../blocks/blocks.service';
 
 @Injectable()
 export class SearchService {
@@ -12,39 +13,65 @@ export class SearchService {
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(PostEntity)
     private readonly postRepo: Repository<PostEntity>,
+    private readonly blocks: BlocksService,
   ) {}
 
   /**
    * Search users by username OR fullName — case-insensitive prefix/contains
-   * match. Excludes no-one (results are visible to anyone; per-field privacy
-   * is enforced at the resolver level for protected fields).
+   * match. If `viewerId` is provided, hides users who have blocked the viewer
+   * (the viewer can't reach them anyway) and users the viewer has blocked
+   * (no point surfacing them in search).
    *
    * Uses LOWER(...) LIKE LOWER(...) which works on both SQLite and Postgres
    * without needing ILIKE.
    */
-  async searchUsers(query: string, limit = 20): Promise<UserEntity[]> {
+  async searchUsers(query: string, limit = 20, viewerId?: string): Promise<UserEntity[]> {
     const q = this.sanitizeQuery(query);
     if (!q) return [];
     const pattern = `%${q}%`;
-    return this.userRepo
+
+    let excludeIds: string[] = [];
+    if (viewerId) {
+      const blocked = await this.blocks.getBlockedIds(viewerId);
+      const blockers = await this.blocks.getBlockerIds(viewerId);
+      excludeIds = [...new Set([...blocked, ...blockers])];
+    }
+
+    const qb = this.userRepo
       .createQueryBuilder('u')
-      .where('LOWER(u.username) LIKE LOWER(:p)', { p: pattern })
-      .orWhere('LOWER(COALESCE(u.fullName, \'\')) LIKE LOWER(:p)', { p: pattern })
+      .where(
+        '(LOWER(u.username) LIKE LOWER(:p) OR LOWER(COALESCE(u.fullName, \'\')) LIKE LOWER(:p))',
+        { p: pattern },
+      )
       .orderBy('u.isVerified', 'DESC')
       .addOrderBy('u.createdAt', 'ASC') // established accounts first
-      .take(limit)
-      .getMany();
+      .take(limit);
+
+    if (excludeIds.length > 0) {
+      qb.andWhere('u.id NOT IN (:...excludeIds)', { excludeIds });
+    }
+
+    return qb.getMany();
   }
 
   /**
    * Search non-reel posts by caption. Excludes archived posts (they should
-   * not surface in search results).
+   * not surface in search results). If `viewerId` is provided, hides posts
+   * from blocked authors.
    */
-  async searchPosts(query: string, limit = 20): Promise<PostEntity[]> {
+  async searchPosts(query: string, limit = 20, viewerId?: string): Promise<PostEntity[]> {
     const q = this.sanitizeQuery(query);
     if (!q) return [];
     const pattern = `%${q}%`;
-    return this.postRepo
+
+    let excludeAuthorIds: string[] = [];
+    if (viewerId) {
+      const blocked = await this.blocks.getBlockedIds(viewerId);
+      const blockers = await this.blocks.getBlockerIds(viewerId);
+      excludeAuthorIds = [...new Set([...blocked, ...blockers])];
+    }
+
+    const qb = this.postRepo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.author', 'author')
       .where('p.isReel = :isReel', { isReel: false })
@@ -52,18 +79,32 @@ export class SearchService {
       .andWhere('LOWER(COALESCE(p.caption, \'\')) LIKE LOWER(:p)', { p: pattern })
       .orderBy('p.likesCount', 'DESC')
       .addOrderBy('p.createdAt', 'DESC')
-      .take(limit)
-      .getMany();
+      .take(limit);
+
+    if (excludeAuthorIds.length > 0) {
+      qb.andWhere('p.authorId NOT IN (:...excludeAuthorIds)', { excludeAuthorIds });
+    }
+
+    return qb.getMany();
   }
 
   /**
    * Search reel posts (isReel=true) by caption. Excludes archived reels.
+   * If `viewerId` is provided, hides reels from blocked authors.
    */
-  async searchReels(query: string, limit = 20): Promise<PostEntity[]> {
+  async searchReels(query: string, limit = 20, viewerId?: string): Promise<PostEntity[]> {
     const q = this.sanitizeQuery(query);
     if (!q) return [];
     const pattern = `%${q}%`;
-    return this.postRepo
+
+    let excludeAuthorIds: string[] = [];
+    if (viewerId) {
+      const blocked = await this.blocks.getBlockedIds(viewerId);
+      const blockers = await this.blocks.getBlockerIds(viewerId);
+      excludeAuthorIds = [...new Set([...blocked, ...blockers])];
+    }
+
+    const qb = this.postRepo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.author', 'author')
       .where('p.isReel = :isReel', { isReel: true })
@@ -71,8 +112,13 @@ export class SearchService {
       .andWhere('LOWER(COALESCE(p.caption, \'\')) LIKE LOWER(:p)', { p: pattern })
       .orderBy('p.viewsCount', 'DESC')
       .addOrderBy('p.likesCount', 'DESC')
-      .take(limit)
-      .getMany();
+      .take(limit);
+
+    if (excludeAuthorIds.length > 0) {
+      qb.andWhere('p.authorId NOT IN (:...excludeAuthorIds)', { excludeAuthorIds });
+    }
+
+    return qb.getMany();
   }
 
   /**
@@ -81,6 +127,10 @@ export class SearchService {
    * tag whose name starts with the query (case-insensitive).
    *
    * Returns the top-N tags sorted by total count desc.
+   *
+   * NOTE: hashtag search does NOT filter by block status — a hashtag is a
+   * global concept and aggregating per-user would be expensive; clients can
+   * filter individual posts client-side after opening a hashtag page.
    */
   async searchHashtags(query: string, limit = 20): Promise<HashtagSearchResult[]> {
     const q = this.sanitizeQuery(query);
@@ -124,12 +174,13 @@ export class SearchService {
   /**
    * Unified search — runs users, posts, reels, hashtags queries and bundles
    * them into a single SearchResponse. Useful for a "global search box".
+   * If `viewerId` is provided, blocks are honored for users/posts/reels.
    */
-  async searchAll(query: string, limit = 10): Promise<SearchResponse> {
+  async searchAll(query: string, limit = 10, viewerId?: string): Promise<SearchResponse> {
     const [users, posts, reels, hashtags] = await Promise.all([
-      this.searchUsers(query, limit),
-      this.searchPosts(query, limit),
-      this.searchReels(query, limit),
+      this.searchUsers(query, limit, viewerId),
+      this.searchPosts(query, limit, viewerId),
+      this.searchReels(query, limit, viewerId),
       this.searchHashtags(query, limit),
     ]);
     return { users, posts, reels, hashtags };

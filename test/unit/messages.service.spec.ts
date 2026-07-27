@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MessagesService } from '@/modules/messages/messages.service';
+import { BlocksService } from '@/modules/blocks/blocks.service';
 import { MessageThreadEntity } from '@/modules/messages/entities/message-thread.entity';
 import { MessageEntity } from '@/modules/messages/entities/message.entity';
 import { UserEntity } from '@/modules/users/user.entity';
@@ -18,6 +19,10 @@ import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity'
 import { HighlightItemEntity } from '@/modules/highlights/entities/highlight-item.entity';
 import { ReelViewEntity } from '@/modules/reels/entities/reel-view.entity';
 import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
+import { BlockEntity } from '@/modules/blocks/block.entity';
+import { MuteEntity } from '@/modules/mutes/mute.entity';
+import { CollectionEntity } from '@/modules/collections/collection.entity';
+import { CollectionItemEntity } from '@/modules/collections/collection-item.entity';
 import { NotificationEntity } from '@/modules/notifications/entities/notification.entity';
 import {
   BadRequestException,
@@ -64,13 +69,17 @@ describe('MessagesService', () => {
             NotificationEntity,
             MessageThreadEntity,
             MessageEntity,
+            BlockEntity,
+            MuteEntity,
+            CollectionEntity,
+            CollectionItemEntity,
           ],
           synchronize: true,
           logging: false,
         }),
-        TypeOrmModule.forFeature([MessageThreadEntity, MessageEntity, UserEntity]),
+        TypeOrmModule.forFeature([MessageThreadEntity, MessageEntity, UserEntity, BlockEntity]),
       ],
-      providers: [MessagesService],
+      providers: [MessagesService, BlocksService],
     }).compile();
 
     service = moduleRef.get(MessagesService);

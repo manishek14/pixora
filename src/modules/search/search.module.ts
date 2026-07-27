@@ -5,9 +5,10 @@ import { PostEntity } from '../posts/post.entity';
 import { SearchService } from './search.service';
 import { SearchResolver } from './search.resolver';
 import { HashtagSearchResult, SearchResponse } from './search-types';
+import { BlocksModule } from '../blocks/blocks.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity, PostEntity])],
+  imports: [TypeOrmModule.forFeature([UserEntity, PostEntity]), BlocksModule],
   providers: [SearchService, SearchResolver, HashtagSearchResult, SearchResponse],
   exports: [SearchService],
 })

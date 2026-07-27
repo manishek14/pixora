@@ -1,10 +1,11 @@
-# Lenz — Work Log
+# Pixora — Work Log
 
 ## Project Overview
-Building Lenz — an Instagram-like bilingual (fa/en) social platform with NestJS + GraphQL + TypeORM + Next.js.
+Building Pixora — an Instagram-like bilingual (fa/en) social platform with NestJS + GraphQL + TypeORM + Next.js.
+(Originally launched as "Lenz"; renamed to Pixora in Phase 5.)
 
 ## Decisions
-- **Name**: Lenz (لنز) — short, pronounceable in fa/en, image-related
+- **Name**: Pixora (پیکسرا) — combination of "Pixel" + "Aurora"; short, pronounceable in fa/en, image-related
 - **Database**: PostgreSQL + TypeORM (per user request); SQLite (better-sqlite3) used for local dev
 - **Frontend**: Next.js + React (EJS dropped because the combo is non-standard)
 - **Auth**: JWT access (15m) + refresh (7d) in localStorage, refresh-token rotation
@@ -555,3 +556,55 @@ Stage Summary:
 - GraphQL enum values are returned as PascalCase keys (matching @nestjs/graphql convention)
 - Backend still boots cleanly on http://localhost:4000/graphql
 - All 4 phases complete; ready for GitHub push
+
+---
+
+Task ID: 5
+Agent: main
+Task: Phase 5 — Blocks, Mutes, Suggestions, Collections + rename project to Pixora
+
+Work Log:
+- Renamed project from "lenz" to "pixora" across package.json, package-lock.json, bun.lock, docker-compose.yml, README.md, src/app.module.ts (DB defaults), src/main.ts (boot log), src/config/env.validation.ts (JWT/DB defaults), test/setup.ts (comments), scripts/smoke-test.sh. Updated all test URLs (cdn.lenz.app → cdn.pixora.app).
+- Phase 4 e2e bug fix: NotificationEntity compiled cleanly — confirmed all 28 Phase 4 e2e tests pass.
+- Phase 5 — BlocksModule:
+  - block.entity.ts: BlockEntity (id, blockerId+blocker eager, blockedId+blocked eager, createdAt). Unique (blockerId, blockedId). Index on both directions.
+  - blocks.service.ts: block (idempotent, rejects self + NotFound), unblock, listBlockedBy, isBlocking, isBlockedEitherWay, getBlockedIds, getBlockerIds. Explicit createdAt on insert.
+  - blocks.resolver.ts: myBlocks / isBlocked queries, blockUser / unblockUser mutations. Persian descriptions.
+- Phase 5 — MutesModule:
+  - mute.entity.ts: MuteEntity (muterId, mutedId, mutePosts default true, muteStories default true, createdAt). Unique (muterId, mutedId).
+  - mutes.service.ts: mute (creates or updates in place), unmute, listMutedBy, getMute, isMutedPosts, isMutedStories, getMutedPostsIds, getMutedStoriesIds.
+  - mutes.resolver.ts: myMutes / isMuted queries, muteUser (with mutePosts/muteStories args) / unmuteUser mutations.
+- Phase 5 — SuggestionsModule:
+  - suggestion-types.ts: SuggestionItem (user, mutualCount, reason), SuggestionListResult.
+  - suggestions.service.ts: suggest(userId, limit). Algorithm: mutual friends first (users followed by ≥2 of my followings, sorted by mutual count desc), fallback to verified users. Excludes self, already-followed, blocked-either-way.
+  - suggestions.resolver.ts: suggestUsers query.
+- Phase 5 — CollectionsModule:
+  - collection.entity.ts: CollectionEntity (id, userId+user eager, name, description?, coverPostId?, createdAt, updatedAt, items OneToMany). Index (userId, name).
+  - collection-item.entity.ts: CollectionItemEntity (collectionId+collection, postId+post). Unique (collectionId, postId).
+  - collections.service.ts: create (rejects empty/duplicate name), list (alphabetical), get (owner-only, preloads items+post+author), update, delete, addItem (idempotent), removeItem, itemCount.
+  - collections.resolver.ts: myCollections / collection queries, createCollection / updateCollection / deleteCollection / addToCollection / removeFromCollection mutations.
+- Phase 5 — Cross-module wiring:
+  - FollowsService: rejects follow if either party has blocked the other. Added removeAllFollowsBetween helper.
+  - LikesService: rejects like if either party has blocked.
+  - CommentsService: rejects comment if either party has blocked.
+  - MessagesService: rejects send if either party has blocked.
+  - SearchService: hides blocked users / blocked posts / blocked reels from results (wraps LIKE clauses in parens to fix WHERE/OR/AND precedence).
+  - FeedService: getFeed filters out muted posts + blocked users from author list. getExploreFeed(userId) takes optional viewerId to filter muted/blocked. exploreFeed resolver uses OptionalGqlAuthGuard.
+- Phase 5 — New OptionalGqlAuthGuard (auth/guards/optional-gql-auth.guard.ts): AuthGuard('jwt') that returns user || undefined instead of throwing — lets public endpoints (search, exploreFeed) optionally read viewer identity from req.user.
+- Phase 5 — AppModule: added BlocksModule, MutesModule, SuggestionsModule, CollectionsModule imports.
+- Phase 5 — Tests:
+  - test/unit/blocks.service.spec.ts (19 tests): block (5), unblock (2), listBlockedBy (2), isBlocking (2), isBlockedEitherWay (3), getBlockedIds/getBlockerIds (3).
+  - test/unit/mutes.service.spec.ts (16 tests): mute (6), unmute (2), listMutedBy (2), getMute/isMutedPosts/isMutedStories (3), getMutedPostsIds/getMutedStoriesIds (3).
+  - test/unit/collections.service.spec.ts (30 tests): create (5), list (3), get (3), update (5), delete (4), addItem (5), removeItem (3), itemCount (2).
+  - test/unit/suggestions.service.spec.ts (8 tests): mutual-friend ranking, exclusion rules (already-followed, self, blocked), verified-user fallback, limit parameter.
+  - test/e2e/phase5.e2e-spec.ts (37 tests): Blocks (12), Mutes (8), Suggestions (4), Collections (11), Cross-module integration (2).
+- Phase 5 — Existing tests updated: all 9 unit test files now register 19 entities (added BlockEntity, MuteEntity, CollectionEntity, CollectionItemEntity to entities:[]). Tests that use FollowsService (stories, explore, highlights) now also provide BlocksService. Tests that use MessagesService/SearchService now also provide BlocksService. The auth, bookmarks, notifications, reels tests didn't need new dependencies (their services don't depend on BlocksService).
+
+Stage Summary:
+- Project renamed: lenz → pixora. DB file: pixora.db, container names: pixora-postgres/redis/minio, JWT secrets: pixora-access/refresh-secret-change-me.
+- Phase 5 source complete: 4 new modules, 4 new entities, 4 new services + resolvers, cross-module wiring for blocks/mutes/feed/search.
+- All tests pass: 235 unit tests (13 files), 116 e2e tests (5 files). Build is clean. Backend boots and serves GraphQL on :4000.
+- Total entities in app: 19 (UserEntity, PostEntity, FollowEntity, LikeEntity, CommentEntity, StoryEntity, StoryViewEntity, StoryReactionEntity, HighlightEntity, HighlightItemEntity, ReelViewEntity, BookmarkEntity, NotificationEntity, MessageThreadEntity, MessageEntity, BlockEntity, MuteEntity, CollectionEntity, CollectionItemEntity).
+- Total modules: 19 (Auth, Users, Posts, Likes, Comments, Follows, Feed, Uploads, Stories, Highlights, Reels, Bookmarks, Explore, Notifications, Messages, Search, Blocks, Mutes, Suggestions, Collections — feed module listed once but FeedService is its own).
+
+Next step: push to GitHub (https://github.com/manishek14/pixora).
