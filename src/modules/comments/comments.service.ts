@@ -4,6 +4,11 @@ import { Repository, IsNull } from 'typeorm';
 import { CommentEntity } from './comment.entity';
 import { CreateCommentInput } from './dto/create-comment.input';
 import { PostsService } from '../posts/posts.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationType,
+  NotificationEntityType,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class CommentsService {
@@ -11,11 +16,12 @@ export class CommentsService {
     @InjectRepository(CommentEntity)
     private readonly commentRepo: Repository<CommentEntity>,
     private readonly postsService: PostsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(userId: string, input: CreateCommentInput): Promise<CommentEntity> {
     // Ensure post exists
-    await this.postsService.findById(input.postId);
+    const post = await this.postsService.findById(input.postId);
 
     const comment = this.commentRepo.create({
       userId,
@@ -26,6 +32,17 @@ export class CommentsService {
 
     const saved = await this.commentRepo.save(comment);
     await this.postsService.incrementComments(input.postId);
+
+    // Best-effort notification to the post author (skipped if self-comment
+    // or if replying to your own comment on your own post).
+    await this.notifications.create({
+      recipientId: post.authorId,
+      actorId: userId,
+      type: NotificationType.Comment,
+      entityType: post.isReel ? NotificationEntityType.Reel : NotificationEntityType.Post,
+      entityId: input.postId,
+    });
+
     // Reload with user relation populated
     const reloaded = await this.commentRepo.findOne({
       where: { id: saved.id },

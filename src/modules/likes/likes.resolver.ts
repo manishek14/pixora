@@ -1,4 +1,4 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, ID } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { LikeEntity } from './like.entity';
 import { LikesService } from './likes.service';
@@ -16,7 +16,7 @@ export class LikesResolver {
   @UseGuards(GqlAuthGuard)
   async toggleLike(
     @CurrentUser() user: UserEntity,
-    @Args('postId') postId: string,
+    @Args('postId', { type: () => ID }) postId: string,
   ): Promise<boolean> {
     return this.likes.toggle(user.id, postId);
   }
@@ -25,13 +25,13 @@ export class LikesResolver {
   @UseGuards(GqlAuthGuard)
   async isLiked(
     @CurrentUser() user: UserEntity,
-    @Args('postId') postId: string,
+    @Args('postId', { type: () => ID }) postId: string,
   ): Promise<boolean> {
     return this.likes.isLiked(user.id, postId);
   }
 
   @Query(() => [LikeEntity], { description: 'لیست لایک‌کنندگان پست' })
-  async likers(@Args('postId') postId: string): Promise<LikeEntity[]> {
+  async likers(@Args('postId', { type: () => ID }) postId: string): Promise<LikeEntity[]> {
     return this.likes.getLikers(postId);
   }
 }

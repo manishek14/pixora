@@ -125,6 +125,44 @@ type AuthPayload {
   refreshToken: String!
 }
 
+type Notification {
+  id: ID!
+  recipient: User!
+  actor: User
+  type: NotificationType!
+  text: String
+  entityType: NotificationEntityType
+  entityId: ID
+  isRead: Boolean!
+  createdAt: DateTime!
+}
+
+enum NotificationType {
+  Like
+  Comment
+  Follow
+  StoryView
+  StoryReaction
+  ReelView
+  Mention
+  System
+}
+
+enum NotificationEntityType {
+  Post
+  Reel
+  Story
+  Comment
+  User
+  Message
+}
+
+type NotificationListResult {
+  items: [Notification!]!
+  hasMore: Boolean!
+  unreadCount: Int!
+}
+
 type FeedResult {
   items: [Post!]!
   hasMore: Boolean!
@@ -167,6 +205,45 @@ type SuggestedUser {
   postsCount: Int!
 }
 
+type Message {
+  id: ID!
+  text: String
+  mediaUrls: [String!]
+  isRead: Boolean!
+  createdAt: DateTime!
+  sender: User!
+}
+
+type MessageThread {
+  id: ID!
+  lastMessageAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  userA: User!
+  userB: User!
+  messages: [Message!]
+}
+
+type ThreadListResult {
+  items: [MessageThread!]!
+  hasMore: Boolean!
+  unreadCount: Int!
+}
+
+type HashtagSearchResult {
+  tag: String!
+  postsCount: Int!
+  reelsCount: Int!
+  total: Int!
+}
+
+type SearchResponse {
+  users: [User!]!
+  posts: [Post!]!
+  reels: [Post!]!
+  hashtags: [HashtagSearchResult!]!
+}
+
 type Query {
   """کاربر فعلی"""
   me: User!
@@ -177,8 +254,8 @@ type Query {
   """دریافت کاربر با نام کاربری"""
   userByUsername(username: String!): User!
 
-  """جستجوی کاربران"""
-  searchUsers(q: String!, limit: Int = 20): [User!]!
+  """جستجوی کاربر بر اساس username یا fullName"""
+  searchUsers(query: String!, limit: Int = 20): [User!]!
 
   """دریافت یک پست با شناسه"""
   post(id: String!): Post!
@@ -190,10 +267,16 @@ type Query {
   postsByHashtag(tag: String!, limit: Int = 20, offset: Int = 0): [Post!]!
 
   """آیا کاربر پست را لایک کرده؟"""
-  isLiked(postId: String!): Boolean!
+  isLiked(postId: ID!): Boolean!
 
   """لیست لایک‌کنندگان پست"""
-  likers(postId: String!): [Like!]!
+  likers(postId: ID!): [Like!]!
+
+  """لیست نوتیفیکیشن‌های کاربر فعلی (جدیدترین اول)"""
+  myNotifications(limit: Int = 20, offset: Int = 0, onlyUnread: Boolean = false): NotificationListResult!
+
+  """تعداد نوتیفیکیشن‌های خوانده‌نشده کاربر فعلی"""
+  myUnreadNotificationsCount: Int!
 
   """کامنت‌های یک پست با پاسخ‌ها"""
   comments(postId: String!): [Comment!]!
@@ -271,6 +354,30 @@ type Query {
 
   """پیشنهاد فالو بر اساس فالوورهای مشترک"""
   suggestedUsers(limit: Int = 10): [SuggestedUser!]!
+
+  """لیست ترد پیام‌های کاربر فعلی (نزدیک‌ترین فعالیت اول)"""
+  myThreads(limit: Int = 20, offset: Int = 0): ThreadListResult!
+
+  """گرفتن یک ترد پیام با شناسه — فقط برای شرکت‌کنندگان ترد"""
+  thread(id: ID!, messageLimit: Int = 50): MessageThread!
+
+  """گرفتن یا ساختن ترد پیام با یک کاربر دیگر"""
+  threadWithUser(userId: ID!, messageLimit: Int = 50): MessageThread!
+
+  """تعداد پیام‌های خوانده‌نشده کاربر فعلی در همه ترد‌ها"""
+  unreadMessagesCount: Int!
+
+  """جستجوی پست‌ها (غیر Reel) بر اساس caption — بایگانی‌شده‌ها حذف می‌شوند"""
+  searchPosts(query: String!, limit: Int = 20): [Post!]!
+
+  """جستجوی Reelها بر اساس caption — بایگانی‌شده‌ها حذف می‌شوند"""
+  searchReels(query: String!, limit: Int = 20): [Post!]!
+
+  """جستجوی هشتگ‌ها — برمی‌گرداند: tag, postsCount, reelsCount, total"""
+  searchHashtags(query: String!, limit: Int = 20): [HashtagSearchResult!]!
+
+  """جستجوی یکپارچه — کاربران، پست‌ها، Reelها و هشتگ‌ها در یک درخواست"""
+  searchAll(query: String!, limit: Int = 10): SearchResponse!
 }
 
 type Mutation {
@@ -305,7 +412,18 @@ type Mutation {
   toggleArchive(id: String!, archive: Boolean!): Post!
 
   """لایک/آنلایک پست (toggle). true = لایک شد، false = آنلایک شد"""
-  toggleLike(postId: String!): Boolean!
+  toggleLike(postId: ID!): Boolean!
+
+  """علامت‌گذاری یک نوتیفیکیشن به‌عنوان خوانده‌شده"""
+  markNotificationRead(id: ID!): Notification!
+
+  """
+  علامت‌گذاری همه نوتیفیکیشن‌ها به‌عنوان خوانده‌شده. برمی‌گرداند: تعداد آپدیت‌شده
+  """
+  markAllNotificationsRead: Int!
+
+  """حذف یک نوتیفیکیشن از لیست کاربر فعلی"""
+  deleteNotification(id: ID!): Boolean!
 
   """ثبت کامنت یا پاسخ"""
   createComment(input: CreateCommentInput!): Comment!
@@ -373,6 +491,17 @@ type Mutation {
 
   """ذخیره/حذف پست (تاگل). برمی‌گرداند: true اگر ذخیره شد، false اگر حذف شد"""
   toggleBookmark(postId: ID!): Boolean!
+
+  """ارسال پیام به یک کاربر (ترد به‌صورت خودکار ساخته می‌شود)"""
+  sendMessage(input: SendMessageInput!): Message!
+
+  """
+  علامت‌گذاری همه پیام‌های ورودی یک ترد به‌عنوان خوانده‌شده. برمی‌گرداند: تعداد پیام‌های آپدیت‌شده
+  """
+  markThreadRead(threadId: ID!): Int!
+
+  """حذف یکی از پیام‌های خود کاربر (فقط فرستنده می‌تواند حذف کند)"""
+  deleteMessage(id: ID!): Boolean!
 }
 
 input RegisterInput {
@@ -454,4 +583,10 @@ input CreateReelInput {
   hashtags: [String!]
   mentions: [String!]
   location: String
+}
+
+input SendMessageInput {
+  recipientId: String!
+  text: String
+  mediaUrls: [String!]
 }

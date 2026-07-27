@@ -21,6 +21,10 @@ import { HighlightEntity } from '@/modules/highlights/entities/highlight.entity'
 import { HighlightItemEntity, HighlightMediaType } from '@/modules/highlights/entities/highlight-item.entity';
 import { ReelViewEntity } from '@/modules/reels/entities/reel-view.entity';
 import { BookmarkEntity } from '@/modules/bookmarks/bookmark.entity';
+import { NotificationEntity } from '@/modules/notifications/entities/notification.entity';
+import { MessageThreadEntity } from '@/modules/messages/entities/message-thread.entity';
+import { MessageEntity } from '@/modules/messages/entities/message.entity';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { JwtModule } from '@nestjs/jwt';
 import {
   BadRequestException,
@@ -68,6 +72,9 @@ describe('HighlightsService', () => {
             HighlightItemEntity,
             ReelViewEntity,
             BookmarkEntity,
+            NotificationEntity,
+            MessageThreadEntity,
+            MessageEntity,
           ],
           synchronize: true,
           logging: false,
@@ -83,10 +90,11 @@ describe('HighlightsService', () => {
           PostEntity,
           LikeEntity,
           CommentEntity,
+          NotificationEntity,
         ]),
         JwtModule.register({ secret: 'test-secret', signOptions: { expiresIn: '15m' } }),
       ],
-      providers: [HighlightsService, StoriesService, AuthService, FollowsService],
+      providers: [HighlightsService, StoriesService, AuthService, FollowsService, NotificationsService],
     }).compile();
 
     service = moduleRef.get(HighlightsService);

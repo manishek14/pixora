@@ -20,6 +20,9 @@ import { HighlightsModule } from './modules/highlights/highlights.module';
 import { ReelsModule } from './modules/reels/reels.module';
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 import { ExploreModule } from './modules/explore/explore.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { MessagesModule } from './modules/messages/messages.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -76,6 +79,9 @@ import { ExploreModule } from './modules/explore/explore.module';
     ReelsModule,
     BookmarksModule,
     ExploreModule,
+    NotificationsModule,
+    MessagesModule,
+    SearchModule,
   ],
 })
 export class AppModule {}

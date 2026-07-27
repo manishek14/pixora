@@ -5,9 +5,15 @@ import { LikesService } from './likes.service';
 import { LikesResolver } from './likes.resolver';
 import { PostsModule } from '../posts/posts.module';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LikeEntity]), PostsModule, AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([LikeEntity]),
+    PostsModule,
+    AuthModule,
+    NotificationsModule,
+  ],
   providers: [LikesService, LikesResolver],
   exports: [LikesService],
 })

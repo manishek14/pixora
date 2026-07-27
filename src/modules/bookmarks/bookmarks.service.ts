@@ -29,7 +29,14 @@ export class BookmarksService {
       return false;
     }
 
-    const bookmark = this.bookmarkRepo.create({ userId, postId });
+    // Explicit createdAt preserves millisecond precision (SQLite's default
+    // CURRENT_TIMESTAMP is second-precision which makes consecutive bookmarks
+    // within the same second sort unreliably).
+    const bookmark = this.bookmarkRepo.create({
+      userId,
+      postId,
+      createdAt: new Date(),
+    });
     await this.bookmarkRepo.save(bookmark);
     return true;
   }

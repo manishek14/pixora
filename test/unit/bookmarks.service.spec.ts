@@ -165,7 +165,7 @@ describe('BookmarksService', () => {
       const p2 = await newPost(author.id, 'second');
 
       await service.toggle(saver.id, p1.id);
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 10));
       await service.toggle(saver.id, p2.id);
 
       const result = await service.list(saver.id);

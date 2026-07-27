@@ -3,6 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FollowEntity } from './follow.entity';
 import { UserEntity } from '../users/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationType,
+  NotificationEntityType,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class FollowsService {
@@ -11,6 +16,7 @@ export class FollowsService {
     private readonly followRepo: Repository<FollowEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async follow(followerId: string, followingId: string): Promise<FollowEntity> {
@@ -31,7 +37,19 @@ export class FollowsService {
       isAccepted: !target.isPrivate, // auto-accept for public accounts
     });
 
-    return this.followRepo.save(follow);
+    const saved = await this.followRepo.save(follow);
+
+    // Best-effort notification to the followed user (skipped if self-follow,
+    // which is already blocked above, but kept for safety).
+    await this.notifications.create({
+      recipientId: followingId,
+      actorId: followerId,
+      type: NotificationType.Follow,
+      entityType: NotificationEntityType.User,
+      entityId: followingId,
+    });
+
+    return saved;
   }
 
   async unfollow(followerId: string, followingId: string): Promise<boolean> {

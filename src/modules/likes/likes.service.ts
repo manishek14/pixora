@@ -3,6 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LikeEntity } from './like.entity';
 import { PostsService } from '../posts/posts.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationType,
+  NotificationEntityType,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class LikesService {
@@ -10,11 +15,12 @@ export class LikesService {
     @InjectRepository(LikeEntity)
     private readonly likeRepo: Repository<LikeEntity>,
     private readonly postsService: PostsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async toggle(userId: string, postId: string): Promise<boolean> {
     // Ensure post exists
-    await this.postsService.findById(postId);
+    const post = await this.postsService.findById(postId);
 
     const existing = await this.likeRepo.findOne({ where: { userId, postId } });
     if (existing) {
@@ -26,6 +32,16 @@ export class LikesService {
     const like = this.likeRepo.create({ userId, postId });
     await this.likeRepo.save(like);
     await this.postsService.incrementLikes(postId);
+
+    // Best-effort notification to the post author (skipped if self-like).
+    await this.notifications.create({
+      recipientId: post.authorId,
+      actorId: userId,
+      type: NotificationType.Like,
+      entityType: post.isReel ? NotificationEntityType.Reel : NotificationEntityType.Post,
+      entityId: postId,
+    });
+
     return true; // liked
   }
 
